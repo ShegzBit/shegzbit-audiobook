@@ -1,0 +1,326 @@
+#!/usr/bin/env python3
+"""
+novel_reader.py — Fetch a web novel chapter from a URL and read it aloud
+in a natural, human-like voice.
+
+Uses:
+  - trafilatura / BeautifulSoup  -> extract the actual chapter text (strips
+    nav bars, ads, "next chapter" links, comment sections, etc.)
+  - edge-tts                    -> free, high-quality neural TTS (no API key)
+  - pydub + ffmpeg              -> stitch chunks together with natural pauses
+
+Install once:
+    pip install edge-tts trafilatura beautifulsoup4 requests pydub --break-system-packages
+    (also need ffmpeg installed on your system: `sudo apt install ffmpeg` /
+     `brew install ffmpeg` / choco on Windows)
+
+Usage:
+    python novel_reader.py "<chapter_url>"
+    python novel_reader.py "<chapter_url>" --voice en-US-AndrewNeural --rate +5% --play
+    python novel_reader.py "<chapter_url>" --output chapter1.mp3
+
+List available voices:
+    python novel_reader.py --list-voices
+"""
+
+import argparse
+import asyncio
+import re
+import sys
+import tempfile
+import os
+from pathlib import Path
+
+import requests
+from bs4 import BeautifulSoup
+
+try:
+    import trafilatura
+except ImportError:
+    trafilatura = None
+
+import edge_tts
+from pydub import AudioSegment
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    )
+}
+
+# A few voices that sound notably natural / "human" rather than flat.
+RECOMMENDED_VOICES = {
+    "male": "en-US-AndrewNeural",
+    "female": "en-US-AvaNeural",
+    "male_warm": "en-US-BrianNeural",
+    "female_warm": "en-US-EmmaNeural",
+    "male_uk": "en-GB-RyanNeural",
+    "female_uk": "en-GB-SoniaNeural",
+}
+
+NOISE_SELECTORS = [
+    "script", "style", "nav", "header", "footer", "aside", "form",
+    "iframe", "noscript", "button", "svg",
+]
+# Common junk phrases that leak in even after extraction on novel sites.
+NOISE_PATTERNS = [
+    r"advertisement", r"report chapter", r"next chapter", r"previous chapter",
+    r"read more chapters?.*", r"bookmark this page", r"^\s*chapter list\s*$",
+    r"please disable your ad.?blocker", r"if you.*enjoy.*support.*author",
+    # Patterns specific to the wuxiaspot.com / fanmtl.com template family
+    # (and the many near-identical "MTL aggregator" clones that share it).
+    r"^default$", r"^dyslexic$", r"^roboto$", r"^lora$",
+    r"^prev$", r"^next$", r"^index$", r"chevron_left", r"chevron_right",
+    r"^nights_stay$", r"^home$",
+    r"tap the screen to use advanced tools",
+    r"you can use left and right keyboard keys",
+    r"^search$", r"^categories$", r"^tags$", r"^updates$",
+    r"your (fictional|fan-fiction) stories hub",
+]
+
+# Once any of these show up, everything from that line onward is trailing
+# boilerplate ("You'll Also Like" recommendations, footer links, etc.) —
+# cut the text there rather than trying to filter each line individually.
+TRAILING_CUTOFFS = [
+    r"you'?ll also like",
+    r"^\s*###?\s*user comments",
+    r"^\s*###?\s*hot keywords",
+]
+
+
+def fetch_html(url: str) -> str:
+    resp = requests.get(url, headers=HEADERS, timeout=20)
+    resp.raise_for_status()
+    return resp.text
+
+
+# CSS selectors seen on the wuxiaspot.com / fanmtl.com template family and
+# common lookalikes. Tried before falling back to generic heuristics.
+SITE_TEMPLATE_SELECTORS = [
+    "#chapter-content", ".chapter-content", ".chapter-c",
+    "#chr-content", ".chr-c", ".txt", "#content-area",
+    "article .content", ".reading-content",
+]
+
+
+def extract_with_known_selectors(html: str) -> str | None:
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(NOISE_SELECTORS):
+        tag.decompose()
+    for selector in SITE_TEMPLATE_SELECTORS:
+        node = soup.select_one(selector)
+        if node:
+            paragraphs = node.find_all("p")
+            if paragraphs:
+                text = "\n\n".join(p.get_text(" ", strip=True) for p in paragraphs)
+            else:
+                text = node.get_text("\n\n", strip=True)
+            if len(text) > 200:
+                return text
+    return None
+
+
+def extract_with_trafilatura(html: str) -> str | None:
+    if trafilatura is None:
+        return None
+    text = trafilatura.extract(
+        html,
+        include_comments=False,
+        include_tables=False,
+        no_fallback=False,
+    )
+    return text
+
+
+def extract_with_bs4_heuristic(html: str) -> str:
+    """Fallback: find the element with the most paragraph text — usually
+    the chapter body on novel-reading sites."""
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(NOISE_SELECTORS):
+        tag.decompose()
+
+    candidates = soup.find_all(["div", "article", "section"])
+    best, best_len = None, 0
+    for c in candidates:
+        text = c.get_text(" ", strip=True)
+        if len(text) > best_len:
+            best, best_len = c, len(text)
+
+    if best is None:
+        return soup.get_text(" ", strip=True)
+
+    paragraphs = best.find_all("p")
+    if paragraphs:
+        return "\n\n".join(p.get_text(" ", strip=True) for p in paragraphs)
+    return best.get_text("\n\n", strip=True)
+
+
+def clean_text(raw: str) -> str:
+    lines = [ln.strip() for ln in raw.splitlines()]
+    cleaned = []
+    for ln in lines:
+        if not ln:
+            continue
+        low = ln.lower()
+        # Stop entirely once we hit trailing boilerplate (recommendation
+        # blocks, comment sections, etc.) — nothing useful comes after.
+        if any(re.search(pat, low) for pat in TRAILING_CUTOFFS):
+            break
+        if any(re.search(pat, low) for pat in NOISE_PATTERNS):
+            continue
+        if len(ln) < 3:
+            continue
+        cleaned.append(ln)
+    text = "\n\n".join(cleaned)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return text.strip()
+
+
+def extract_chapter_title(html: str) -> str | None:
+    soup = BeautifulSoup(html, "html.parser")
+    h2 = soup.find("h2")
+    if h2 and h2.get_text(strip=True):
+        return h2.get_text(strip=True)
+    title_tag = soup.find("title")
+    if title_tag and title_tag.get_text(strip=True):
+        return title_tag.get_text(strip=True).split("|")[-1].strip()
+    return None
+
+
+def get_chapter_text(url: str) -> tuple[str, str | None]:
+    print(f"Fetching: {url}")
+    html = fetch_html(url)
+
+    title = extract_chapter_title(html)
+
+    text = extract_with_known_selectors(html)
+    if not text:
+        text = extract_with_trafilatura(html)
+    if not text or len(text) < 200:
+        print("  (falling back to heuristic scan)")
+        text = extract_with_bs4_heuristic(html)
+
+    text = clean_text(text)
+    if len(text) < 100:
+        raise RuntimeError(
+            "Couldn't find a substantial block of chapter text on this page. "
+            "The site's layout may need a custom selector."
+        )
+    return text, title
+
+
+def chunk_text(text: str, max_chars: int = 1400) -> list[str]:
+    """Split on paragraph boundaries so pauses land naturally, keeping each
+    chunk under max_chars (edge-tts is happier with smaller pieces)."""
+    paragraphs = text.split("\n\n")
+    chunks, current = [], ""
+    for para in paragraphs:
+        if len(current) + len(para) + 2 <= max_chars:
+            current = f"{current}\n\n{para}" if current else para
+        else:
+            if current:
+                chunks.append(current)
+            current = para
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+async def synthesize_chunk(text: str, voice: str, rate: str, out_path: str):
+    communicate = edge_tts.Communicate(text, voice=voice, rate=rate)
+    await communicate.save(out_path)
+
+
+async def synthesize_all(chunks: list[str], voice: str, rate: str, tmp_dir: str) -> list[str]:
+    paths = []
+    for i, chunk in enumerate(chunks):
+        out_path = os.path.join(tmp_dir, f"part_{i:04d}.mp3")
+        print(f"  Synthesizing part {i + 1}/{len(chunks)}...")
+        await synthesize_chunk(chunk, voice, rate, out_path)
+        paths.append(out_path)
+    return paths
+
+
+def stitch_audio(paths: list[str], pause_ms: int = 450) -> AudioSegment:
+    silence = AudioSegment.silent(duration=pause_ms)
+    combined = AudioSegment.empty()
+    for i, p in enumerate(paths):
+        combined += AudioSegment.from_mp3(p)
+        if i != len(paths) - 1:
+            combined += silence
+    return combined
+
+
+def list_voices():
+    async def _list():
+        voices = await edge_tts.list_voices()
+        for v in voices:
+            if v["Locale"].startswith("en-"):
+                print(f"{v['ShortName']:30s} {v['Gender']:8s} {v['Locale']}")
+    asyncio.run(_list())
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Read a web novel chapter aloud.")
+    parser.add_argument("url", nargs="?", help="Chapter URL")
+    parser.add_argument("--voice", default=RECOMMENDED_VOICES["male_warm"],
+                         help="edge-tts voice name (default: %(default)s). "
+                              "Use --list-voices to see options.")
+    parser.add_argument("--rate", default="+0%",
+                         help="Speech rate adjustment, e.g. +10%%, -15%% (default: +0%%)")
+    parser.add_argument("--output", default=None,
+                         help="Output mp3 path (default: <chapter_title>.mp3 in ./output)")
+    parser.add_argument("--play", action="store_true",
+                         help="Play the audio immediately after generating it")
+    parser.add_argument("--list-voices", action="store_true",
+                         help="List available English voices and exit")
+    args = parser.parse_args()
+
+    if args.list_voices:
+        list_voices()
+        return
+
+    if not args.url:
+        parser.error("a chapter URL is required (or use --list-voices)")
+
+    text, title = get_chapter_text(args.url)
+    word_count = len(text.split())
+    print(f"Extracted {word_count} words." + (f" ({title})" if title else ""))
+    print(f"Preview:\n---\n{text[:200]}...\n---")
+
+    chunks = chunk_text(text)
+    print(f"Split into {len(chunks)} chunk(s) for synthesis using voice '{args.voice}'.")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        paths = asyncio.run(synthesize_all(chunks, args.voice, args.rate, tmp_dir))
+        print("Stitching audio with natural pauses between paragraphs...")
+        audio = stitch_audio(paths)
+
+        out_dir = Path("output")
+        out_dir.mkdir(exist_ok=True)
+        if args.output:
+            out_path = args.output
+        elif title:
+            slug = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")[:60]
+            out_path = str(out_dir / f"{slug}.mp3")
+        else:
+            out_path = str(out_dir / "chapter.mp3")
+        audio.export(out_path, format="mp3")
+        print(f"Saved: {out_path}  ({len(audio) / 1000:.1f}s)")
+
+    if args.play:
+        try:
+            if sys.platform == "darwin":
+                os.system(f"afplay '{out_path}'")
+            elif sys.platform.startswith("linux"):
+                os.system(f"mpg123 '{out_path}' 2>/dev/null || ffplay -nodisp -autoexit '{out_path}'")
+            else:
+                os.startfile(out_path)  # type: ignore
+        except Exception as e:
+            print(f"Couldn't auto-play ({e}); open {out_path} manually.")
+
+
+if __name__ == "__main__":
+    main()
