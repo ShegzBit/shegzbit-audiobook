@@ -110,12 +110,8 @@ def process_job(job_id: str):
             _set_status(job_id, "error", error_msg=f"Network error: {e}")
             return
 
-        if is_captcha_page(html):
-            _set_status(job_id, "captcha_blocked",
-                        error_msg="Challenge/captcha page detected — human verification required.")
-            return
-
-        # Extract
+        # Extract (captcha detection is deferred inside extract_chapter — we try
+        # to pull text first and only raise CaptchaError if extraction fails)
         _set_status(job_id, "extracting")
         try:
             chapter = extract_chapter(job.url, html)

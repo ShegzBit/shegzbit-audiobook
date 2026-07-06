@@ -19,8 +19,18 @@ except ImportError:
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-    )
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0",
 }
 
 NOISE_SELECTORS = [
@@ -217,12 +227,16 @@ def detect_novel_info(html: str, chapter_url: str) -> dict:
 
 
 def extract_chapter(url: str, html: Optional[str] = None) -> ChapterText:
-    """Main entry point. Fetch (if needed), extract, clean and return ChapterText."""
+    """Main entry point. Fetch (if needed), extract, clean and return ChapterText.
+
+    Captcha detection is intentionally deferred: we always attempt extraction
+    first. Only if extraction yields too little text AND captcha markers are
+    present do we raise CaptchaError. This avoids false positives on sites like
+    fanmtl.com / wuxiaspot.com where Cloudflare injects challenge scripts into
+    the HTML while the chapter content is still present on the page.
+    """
     if html is None:
         html = fetch_html(url)
-
-    if is_captcha_page(html):
-        raise CaptchaError(f"Captcha/challenge page detected at {url}")
 
     title = extract_chapter_title(html)
     next_url = detect_next_chapter_url(html, url)
@@ -237,6 +251,12 @@ def extract_chapter(url: str, html: Optional[str] = None) -> ChapterText:
     text = clean_text(text or "")
 
     if len(text) < 100:
+        # Only now check for captcha — extraction already failed
+        if is_captcha_page(html):
+            raise CaptchaError(
+                "Could not extract chapter text and a captcha/challenge page was detected. "
+                "Open the URL in your browser to solve it, then retry."
+            )
         raise ValueError(
             "Could not find substantial chapter text on this page. "
             f"Tried all extraction strategies on: {url}"
