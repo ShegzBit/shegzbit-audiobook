@@ -3,7 +3,6 @@ worker.py — Background job queue using ThreadPoolExecutor + SQLite.
 No Redis required; jobs are persisted in the DB so status survives queries.
 """
 
-import hashlib
 import logging
 import os
 import time
@@ -82,16 +81,6 @@ def process_job(job_id: str):
         if not job:
             return
 
-        # Check cache
-        url_hash = hashlib.sha256(f"{job.url}:{job.voice}:{job.rate}".encode()).hexdigest()
-        cached = db.query(Chapter).filter(Chapter.url_hash == url_hash).first()
-        if cached and cached.audio_path and os.path.exists(cached.audio_path):
-            job.status = "done"
-            job.chapter_id = cached.id
-            job.updated_at = datetime.utcnow()
-            db.commit()
-            return
-
         # Fetch
         _set_status(job_id, "fetching")
         _rate_limit_domain(job.url)
@@ -126,36 +115,26 @@ def process_job(job_id: str):
         _set_status(job_id, "synthesizing")
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title)
 
-        # Reload job from DB for commit
+        # Save chapter record and update job
         db2 = SessionLocal()
         try:
             job2 = db2.query(Job).filter(Job.id == job_id).first()
-            url_hash2 = hashlib.sha256(f"{job2.url}:{job2.voice}:{job2.rate}".encode()).hexdigest()
-            cached2 = db2.query(Chapter).filter(Chapter.url_hash == url_hash2).first()
 
             novel = _find_or_create_novel(db2, chapter.novel_title, chapter.novel_index_url)
 
-            if not cached2:
-                cached2 = Chapter(
-                    url_hash=url_hash2,
-                    url=job2.url,
-                    voice=job2.voice,
-                    rate=job2.rate,
-                    title=chapter.title,
-                    word_count=chapter.word_count,
-                    audio_path=str(audio_path),
-                    next_chapter_url=chapter.next_chapter_url,
-                    novel_id=novel.id if novel else None,
-                )
-                db2.add(cached2)
-                db2.flush()
-            else:
-                cached2.audio_path = str(audio_path)
-                if chapter.next_chapter_url:
-                    cached2.next_chapter_url = chapter.next_chapter_url
-                if novel and not cached2.novel_id:
-                    cached2.novel_id = novel.id
-                db2.flush()
+            ch = Chapter(
+                url_hash=str(uuid.uuid4()),
+                url=job2.url,
+                voice=job2.voice,
+                rate=job2.rate,
+                title=chapter.title,
+                word_count=chapter.word_count,
+                audio_path=str(audio_path),
+                next_chapter_url=chapter.next_chapter_url,
+                novel_id=novel.id if novel else None,
+            )
+            db2.add(ch)
+            db2.flush()
 
             if novel:
                 ep = db2.query(Episode).filter(
@@ -165,15 +144,15 @@ def process_job(job_id: str):
                 if not ep:
                     ep = Episode(
                         novel_id=novel.id,
-                        chapter_id=cached2.id,
+                        chapter_id=ch.id,
                         chapter_url=job2.url,
                     )
                     db2.add(ep)
                 elif not ep.chapter_id:
-                    ep.chapter_id = cached2.id
+                    ep.chapter_id = ch.id
 
             job2.status = "done"
-            job2.chapter_id = cached2.id
+            job2.chapter_id = ch.id
             job2.updated_at = datetime.utcnow()
             db2.commit()
         finally:
@@ -189,15 +168,6 @@ def process_job(job_id: str):
 def enqueue_job(url: str, voice: str, rate: str) -> str:
     db = SessionLocal()
     try:
-        url_hash = hashlib.sha256(f"{url}:{voice}:{rate}".encode()).hexdigest()
-        cached = db.query(Chapter).filter(Chapter.url_hash == url_hash).first()
-        if cached and cached.audio_path and os.path.exists(cached.audio_path):
-            job_id = str(uuid.uuid4())
-            job = Job(id=job_id, url=url, voice=voice, rate=rate, status="done", chapter_id=cached.id)
-            db.add(job)
-            db.commit()
-            return job_id
-
         job_id = str(uuid.uuid4())
         job = Job(id=job_id, url=url, voice=voice, rate=rate, status="queued")
         db.add(job)
