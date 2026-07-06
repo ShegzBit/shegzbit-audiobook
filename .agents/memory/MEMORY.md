@@ -1,0 +1,1 @@
+- [Starlette 1.x TemplateResponse signature](starlette-template-response.md) — request is now the first arg, not inside the context dict.

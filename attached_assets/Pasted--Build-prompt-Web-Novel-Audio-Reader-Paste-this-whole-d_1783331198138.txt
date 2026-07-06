@@ -1,0 +1,101 @@
+# Build prompt: Web Novel Audio Reader
+
+Paste this whole document into Replit (Agent / Assistant) as the project brief. It's organized as sequential phases — build and verify each phase before moving to the next.
+
+## Project summary
+
+A single-user (small group: me + a few siblings) web app that takes a web novel chapter URL, extracts the chapter text, converts it to natural-sounding speech, and serves/streams the audio back. Includes a library view, auto-advance to the next chapter, and a manual-intervention flow for when the source site throws up a captcha.
+
+Not a public product — no need for billing, public signup flows, or scaling beyond a handful of concurrent users. Optimize for "works reliably for 2-5 people," not "scales to thousands."
+
+## Tech stack
+
+- **Backend**: Python + FastAPI (matches the existing `novel_reader.py` script's ecosystem — reuse its extraction/TTS logic directly rather than rewriting it)
+- **Job queue**: RQ + Redis (lighter than Celery, easy on Replit) — or APScheduler-backed background tasks if Redis is inconvenient in this environment
+- **Database**: SQLite via SQLAlchemy (fine at this scale; swap to Postgres only if needed later)
+- **Browser automation**: Playwright (Python) for fetch + the captcha-handoff flow
+- **Frontend**: Simple server-rendered templates (Jinja2) + vanilla JS for the player, OR a small React app if you'd rather — no strong opinion, pick whichever you're faster in
+- **Audio**: reuse `edge-tts` + `pydub` from the existing script
+- **Auth**: minimal — a shared invite-only password or per-person login (see Phase 5), nothing elaborate
+
+## Existing code to reuse
+
+`novel_reader.py` already has working logic for: HTML fetch, site-specific + generic text extraction, cleanup/noise-stripping, chunking, edge-tts synthesis, and audio stitching with pauses. Import and adapt these functions rather than rewriting — wrap them as callable functions instead of a CLI script.
+
+---
+
+## Phase 1 — Core pipeline (MVP)
+
+Goal: paste a URL, get back playable audio, no polish yet.
+
+1. Set up FastAPI project skeleton with a single `POST /api/chapters` endpoint that accepts a chapter URL.
+2. Wrap `novel_reader.py`'s extraction functions into an importable module (`extractor.py`) with a single entry point: `extract_chapter(url: str) -> ChapterText` (dataclass with `title`, `text`, `word_count`, `source_url`).
+3. Wrap the TTS + stitching logic into `synthesizer.py`: `synthesize(text: str, voice: str, rate: str) -> Path` (returns path to finished mp3).
+4. `POST /api/chapters` synchronously runs extract → synthesize → returns a URL to the finished mp3 file. (Synchronous is fine for Phase 1 — no queue yet.)
+5. Minimal HTML page: URL input box, submit button, `<audio controls>` player once ready.
+6. **Acceptance test**: submit both of these and confirm audio plays with (a) no leftover nav/UI text spoken and (b) chapter title correctly reflected in the filename:
+   - `https://www.wuxiaspot.com/novel/the-end-of-the-world-start-with-a-book-all-superpowers-depend-on-reading_1.html`
+   - `https://www.fanmtl.com/novel/the-quake-quake-fruit-is-weak-have-you-ever-seen-the-sea-split_54.html`
+
+## Phase 2 — Background jobs + caching
+
+Goal: don't block the request thread; don't regenerate audio you already made.
+
+1. Add Redis + RQ (or APScheduler) worker process. `POST /api/chapters` now enqueues a job and returns a `job_id` immediately.
+2. `GET /api/chapters/{job_id}` returns status: `queued | fetching | extracting | synthesizing | done | error | captcha_blocked` (the last one matters for Phase 4).
+3. Cache table: `chapters(url_hash PK, voice, rate, audio_path, title, word_count, created_at)`. Before enqueueing, check cache — if a matching `(url_hash, voice, rate)` row exists, return it immediately without a job.
+4. Frontend: poll `GET /api/chapters/{job_id}` every 1-2s, update UI state (spinner → player) accordingly.
+5. **Acceptance test**: submit the same chapter twice with the same voice — second request returns instantly from cache.
+
+## Phase 3 — Library, chaining, playback UX
+
+Goal: this should feel like a podcast app, not a one-off converter.
+
+1. Data model additions:
+   - `novels(id PK, title, source_index_url, created_at)`
+   - `episodes(id PK, novel_id FK, chapter_url, chapter_number, audio_path, listened_position_seconds, created_at)`
+2. When a chapter is submitted, try to detect the novel's index/table-of-contents URL and the "next chapter" link pattern (both example sites use a `..._{N}.html` pattern — generalize this per-site-adapter, don't hardcode assumptions across all sites).
+3. `POST /api/novels/{id}/queue-next` — enqueues the next sequential chapter automatically once the current one is playing (or finishes), so listening flows chapter-to-chapter without manual re-pasting URLs.
+4. Player UI: playback speed control, skip ±10s, remembers `listened_position_seconds` per episode (save on pause/unload via `navigator.sendBeacon` or periodic PATCH).
+5. Library page: list of tracked novels, each showing latest downloaded/available chapter and a "continue listening" entry point.
+6. **Acceptance test**: submit chapter 1 of a novel, let it finish, confirm chapter 2 auto-queues without re-entering a URL.
+
+## Phase 4 — Captcha handling
+
+Goal: when the source site throws a captcha, hand off to a human cleanly instead of silently failing.
+
+1. Switch the fetch step (in the worker, not the request thread) from plain `requests` to a **persistent Playwright browser context per novel/site** — reuse the same browser profile/cookies across chapters of the same novel so a solved captcha stays solved for subsequent chapters.
+2. Captcha detection signal: HTTP status 403/429, or response HTML containing known challenge markers (Cloudflare interstitial text, `g-recaptcha`, `cf-turnstile`, a suspiciously short/empty content extraction where a normal chapter would be present).
+3. When detected: set job status to `captcha_blocked`, and expose a **live, human-solvable view of that exact browser session** rather than just a static "here's the URL" bounce. In Replit's environment, the practical options, roughly in order of quality:
+   - Use a hosted "remote browser with live view" service (e.g. Browserbase, Steel.dev) — Playwright connects to their remote browser via CDP, and they give you a URL your user can open to see and interact with that literal session.
+   - If avoiding an external service: run Playwright in headed mode behind a VNC server (`x11vnc` + `noVNC`) inside the Repl, and surface the noVNC URL in the UI. More setup, but self-contained.
+   - Fallback (already discussed as a weaker option): just open the source URL in the user's own browser and rely on a "retry" button — acceptable if the target site's captcha isn't tightly IP/session-bound, but should be a documented fallback, not the primary design.
+4. UI: when a job is `captcha_blocked`, show a clear banner: "This chapter needs a quick human check — click to solve it," linking to the live session. A "I solved it, continue" button resumes the job (or auto-resumes on detecting the challenge cleared).
+5. **This flow should never attempt automated captcha-solving services** (2Captcha and similar) — a human on the user's side solves it themselves; the app only automates the handoff.
+6. **Acceptance test**: manually trigger a captcha on one of the two test sites (or a site known to challenge frequently), confirm the job transitions to `captcha_blocked`, the live-solve link works, and the job auto-resumes once solved.
+
+## Phase 5 — Polish for multi-person use
+
+Goal: safe to hand to siblings without you babysitting it.
+
+1. Simple auth: either one shared invite password (simplest) or lightweight per-person accounts if you want separate libraries/progress per sibling.
+2. Per-user (or shared) voice + speech-rate default, saved in settings.
+3. Optional: a private podcast RSS feed per novel (`GET /rss/novels/{id}.xml`) so chapters can be subscribed to in a normal podcast app as they're generated.
+4. Error surfacing: if extraction fails (site layout changed, selector no longer matches), show a clear "couldn't read this chapter" state rather than silently producing empty/garbage audio — log enough detail (URL, which extraction method was tried) that you can patch the site adapter later.
+5. Basic rate-limiting per source domain in the worker (e.g. minimum delay between requests to the same site) to avoid hammering it and increasing the odds of triggering anti-bot measures in the first place.
+
+---
+
+## Non-goals (explicitly out of scope)
+
+- No public signup / billing / multi-tenant scaling — this is for your household, not a product launch.
+- No automated captcha-solving (services or otherwise) — human-in-the-loop only.
+- No redistribution feature (e.g. public shareable links to generated audio for people outside your group) — keep this to the small circle it's built for.
+
+## Environment / secrets checklist for Replit
+
+- `REDIS_URL` (if using RQ)
+- Playwright browser binaries installed (`playwright install chromium`)
+- `ffmpeg` available (needed by `pydub`)
+- If using a hosted remote-browser service for Phase 4: its API key as a secret
+- A basic `SHARED_ACCESS_PASSWORD` or per-user credentials for Phase 5

@@ -1,415 +1,97 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Web Novel TTS</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+{% extends "base.html" %}
+{% block title %}Reader — Web Novel TTS{% endblock %}
 
-    :root {
-      --bg:        #0f1117;
-      --surface:   #1a1d27;
-      --card:      #22263a;
-      --border:    #2e3350;
-      --accent:    #7c6af7;
-      --accent2:   #a78bfa;
-      --text:      #e2e4f0;
-      --muted:     #8b90a8;
-      --danger:    #f87171;
-      --success:   #4ade80;
-      --radius:    12px;
-    }
+{% block content %}
+<div class="page-header">
+  <h1>Chapter Reader</h1>
+  <p class="page-sub">Paste a chapter URL, pick a voice, and get an audiobook.</p>
+</div>
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem 1rem 4rem;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 2.5rem;
-    }
-    header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    header p {
-      color: var(--muted);
-      margin-top: .4rem;
-      font-size: .95rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.75rem;
-      width: 100%;
-      max-width: 680px;
-    }
-
-    .card + .card { margin-top: 1.25rem; }
-
-    label {
-      display: block;
-      font-size: .82rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      margin-bottom: .5rem;
-    }
-
-    input[type="text"],
-    input[type="url"],
-    select {
-      width: 100%;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: .95rem;
-      padding: .65rem .9rem;
-      outline: none;
-      transition: border-color .2s;
-    }
-    input[type="text"]:focus,
-    input[type="url"]:focus,
-    select:focus {
-      border-color: var(--accent);
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .field { display: flex; flex-direction: column; }
-
-    .rate-wrap {
-      display: flex;
-      flex-direction: column;
-    }
-    .rate-display {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: .5rem;
-    }
-    .rate-display span { font-size: .85rem; color: var(--accent2); font-weight: 600; }
-
-    input[type="range"] {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 6px;
-      background: var(--card);
-      border-radius: 3px;
-      outline: none;
-      cursor: pointer;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      background: var(--accent);
-      cursor: pointer;
-      transition: background .2s;
-    }
-    input[type="range"]::-webkit-slider-thumb:hover { background: var(--accent2); }
-
-    .btn-row {
-      display: flex;
-      gap: .75rem;
-      margin-top: 1.25rem;
-    }
-
-    button {
-      flex: 1;
-      padding: .7rem 1.2rem;
-      border: none;
-      border-radius: 8px;
-      font-size: .95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity .2s, transform .1s;
-    }
-    button:active { transform: scale(.98); }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-
-    #btn-preview {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-    #btn-preview:hover:not(:disabled) { border-color: var(--accent); color: var(--accent2); }
-
-    #btn-generate {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-    }
-    #btn-generate:hover:not(:disabled) { opacity: .9; }
-
-    #status {
-      margin-top: 1rem;
-      font-size: .88rem;
-      min-height: 1.4em;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-    }
-    .spinner {
-      width: 16px; height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      flex-shrink: 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .status-error { color: var(--danger); }
-    .status-ok    { color: var(--success); }
-    .status-info  { color: var(--muted); }
-
-    #preview-card { display: none; }
-
-    .preview-meta {
-      display: flex;
-      gap: 1.5rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-    .meta-item { display: flex; flex-direction: column; }
-    .meta-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-    .meta-value { font-size: 1rem; font-weight: 600; color: var(--text); margin-top: .15rem; }
-
-    #preview-title { font-size: 1.05rem; font-weight: 700; margin-bottom: .75rem; color: var(--accent2); }
-
-    #preview-text {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem;
-      font-size: .88rem;
-      line-height: 1.7;
-      color: var(--muted);
-      max-height: 220px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-
-    #download-section { display: none; margin-top: 1rem; }
-    #download-link {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      background: var(--success);
-      color: #0f1117;
-      font-weight: 700;
-      padding: .7rem 1.4rem;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: .95rem;
-      transition: opacity .2s;
-    }
-    #download-link:hover { opacity: .88; }
-
-    @media (max-width: 500px) {
-      .row { grid-template-columns: 1fr; }
-      .btn-row { flex-direction: column; }
-    }
-  </style>
-</head>
-<body>
-
-<header>
-  <h1>📖 Web Novel TTS</h1>
-  <p>Paste a chapter URL and get a natural-sounding MP3 audiobook.</p>
-</header>
-
-<div class="card" id="main-card">
+<div class="card" id="submit-card">
   <div class="field">
     <label for="url-input">Chapter URL</label>
-    <input type="url" id="url-input" placeholder="https://example.com/novel/chapter-1" />
+    <input type="url" id="url-input" class="input"
+           placeholder="https://www.wuxiaspot.com/novel/..." />
   </div>
 
-  <div class="row">
+  <div class="row-2">
     <div class="field">
       <label for="voice-select">Voice</label>
-      <select id="voice-select">
+      <select id="voice-select" class="input">
         {% for key, label in voices.items() %}
-        <option value="{{ key }}" {% if loop.first %}selected{% endif %}>{{ label }}</option>
+        <option value="{{ key }}"
+          {% if key == default_voice %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
-
-    <div class="field rate-wrap">
-      <div class="rate-display">
-        <label for="rate-range" style="margin-bottom:0">Speech Rate</label>
-        <span id="rate-label">+0%</span>
+    <div class="field">
+      <div class="rate-header">
+        <label for="rate-range">Speed</label>
+        <span id="rate-label" class="rate-value">+0%</span>
       </div>
-      <input type="range" id="rate-range" min="-30" max="30" step="5" value="0" />
+      <input type="range" id="rate-range" min="-30" max="30" step="5" value="0" class="range" />
     </div>
   </div>
 
   <div class="btn-row">
-    <button id="btn-preview">Preview Text</button>
-    <button id="btn-generate">Generate MP3</button>
+    <button id="btn-submit" class="btn btn-primary">Generate Audio</button>
   </div>
 
-  <div id="status"></div>
-  <div id="download-section">
-    <a id="download-link" href="#" download>
-      ⬇ Download MP3
-    </a>
+  <div id="job-status" class="job-status" style="display:none">
+    <div class="status-row">
+      <div class="spinner" id="status-spinner"></div>
+      <span id="status-label" class="status-label">Queued…</span>
+    </div>
+    <div id="captcha-block" class="captcha-block" style="display:none">
+      <div class="captcha-icon">🔒</div>
+      <div class="captcha-text">
+        <strong>Human verification needed</strong>
+        <p>This site is blocking automated access. Open the chapter URL in your browser,
+           solve any challenge that appears, then click <strong>Retry</strong>.</p>
+      </div>
+      <div class="captcha-actions">
+        <a id="captcha-open-link" href="#" target="_blank" class="btn btn-secondary">
+          Open in Browser ↗
+        </a>
+        <button id="btn-retry" class="btn btn-primary">Retry</button>
+      </div>
+    </div>
+    <div id="error-block" class="error-block" style="display:none">
+      <span class="error-icon">⚠</span>
+      <span id="error-msg"></span>
+      <button id="btn-retry-error" class="btn btn-sm btn-secondary" style="margin-left:.5rem">Retry</button>
+    </div>
   </div>
 </div>
 
-<div class="card" id="preview-card">
-  <div id="preview-title"></div>
-  <div class="preview-meta">
-    <div class="meta-item">
-      <span class="meta-label">Words</span>
-      <span class="meta-value" id="meta-words">—</span>
+<div id="player-card" class="card player-card" style="display:none">
+  <div class="player-header">
+    <div class="player-meta">
+      <h2 class="player-title" id="player-title">—</h2>
+      <div class="player-tags">
+        <span class="tag" id="player-words">— words</span>
+        <span class="tag" id="player-dur">— min</span>
+      </div>
     </div>
-    <div class="meta-item">
-      <span class="meta-label">Est. Duration</span>
-      <span class="meta-value" id="meta-dur">—</span>
-    </div>
+    <a id="player-download" href="#" download class="btn btn-sm btn-secondary">⬇ Download</a>
   </div>
-  <div id="preview-text"></div>
+  <p class="player-hint">Audio controls appear in the bar at the bottom of the page.</p>
+  <div id="next-chapter-row" class="next-row" style="display:none">
+    <span class="next-label">Next chapter detected —</span>
+    <button id="btn-queue-next" class="btn btn-sm btn-primary">Queue it now</button>
+    <span id="next-queued-msg" style="display:none" class="status-ok">✓ Queuing…</span>
+  </div>
 </div>
 
+<div id="recent-card" class="card" style="display:none">
+  <h3 class="card-title">Recent Chapters</h3>
+  <div id="recent-list" class="episode-list"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  const urlInput      = document.getElementById('url-input');
-  const voiceSelect   = document.getElementById('voice-select');
-  const rateRange     = document.getElementById('rate-range');
-  const rateLabel     = document.getElementById('rate-label');
-  const btnPreview    = document.getElementById('btn-preview');
-  const btnGenerate   = document.getElementById('btn-generate');
-  const statusEl      = document.getElementById('status');
-  const previewCard   = document.getElementById('preview-card');
-  const previewTitle  = document.getElementById('preview-title');
-  const previewText   = document.getElementById('preview-text');
-  const metaWords     = document.getElementById('meta-words');
-  const metaDur       = document.getElementById('meta-dur');
-  const dlSection     = document.getElementById('download-section');
-  const dlLink        = document.getElementById('download-link');
-
-  rateRange.addEventListener('input', () => {
-    const v = parseInt(rateRange.value);
-    rateLabel.textContent = v >= 0 ? `+${v}%` : `${v}%`;
-  });
-
-  function rateValue() {
-    const v = parseInt(rateRange.value);
-    return v >= 0 ? `+${v}%` : `${v}%`;
-  }
-
-  function setStatus(msg, type = 'info') {
-    statusEl.innerHTML = '';
-    if (!msg) return;
-    if (type === 'loading') {
-      const sp = document.createElement('div');
-      sp.className = 'spinner';
-      statusEl.appendChild(sp);
-    }
-    const t = document.createElement('span');
-    t.className = `status-${type === 'loading' ? 'info' : type}`;
-    t.textContent = msg;
-    statusEl.appendChild(t);
-  }
-
-  function setLoading(on) {
-    btnPreview.disabled  = on;
-    btnGenerate.disabled = on;
-  }
-
-  function estDuration(words) {
-    const wpm = 150;
-    const mins = Math.round(words / wpm);
-    if (mins < 1) return '< 1 min';
-    return `~${mins} min`;
-  }
-
-  btnPreview.addEventListener('click', async () => {
-    const url = urlInput.value.trim();
-    if (!url) { setStatus('Please enter a URL.', 'error'); return; }
-    setLoading(true);
-    setStatus('Fetching and extracting chapter text…', 'loading');
-    dlSection.style.display = 'none';
-    try {
-      const resp = await fetch('/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) { setStatus(data.error || 'Unknown error.', 'error'); return; }
-      previewTitle.textContent  = data.title;
-      metaWords.textContent     = data.word_count.toLocaleString();
-      metaDur.textContent       = estDuration(data.word_count);
-      previewText.textContent   = data.preview;
-      previewCard.style.display = 'block';
-      setStatus('Text extracted successfully.', 'ok');
-    } catch (e) {
-      setStatus('Network error: ' + e.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  });
-
-  btnGenerate.addEventListener('click', async () => {
-    const url = urlInput.value.trim();
-    if (!url) { setStatus('Please enter a URL.', 'error'); return; }
-    setLoading(true);
-    dlSection.style.display = 'none';
-    setStatus('Generating audio — this may take a minute…', 'loading');
-    try {
-      const resp = await fetch('/synthesize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          voice: voiceSelect.value,
-          rate: rateValue(),
-          title: previewTitle.textContent || '',
-        }),
-      });
-      if (!resp.ok) {
-        const data = await resp.json();
-        setStatus(data.error || 'Synthesis failed.', 'error');
-        return;
-      }
-      const blob = await resp.blob();
-      const objUrl = URL.createObjectURL(blob);
-      const cd = resp.headers.get('Content-Disposition') || '';
-      const match = cd.match(/filename="?([^"]+)"?/);
-      const filename = match ? match[1] : 'chapter.mp3';
-      dlLink.href = objUrl;
-      dlLink.download = filename;
-      dlSection.style.display = 'block';
-      setStatus('MP3 ready!', 'ok');
-    } catch (e) {
-      setStatus('Network error: ' + e.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  });
+  // Passed from server
+  const PAGE = 'reader';
 </script>
-
-</body>
-</html>
+{% endblock %}

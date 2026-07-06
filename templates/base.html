@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Web Novel TTS{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="nav-brand">📖 Novel TTS</a>
+    <div class="nav-links">
+      <a href="/" class="nav-link{% if request.url.path == '/' %} active{% endif %}">Reader</a>
+      <a href="/library" class="nav-link{% if request.url.path == '/library' %} active{% endif %}">Library</a>
+      {% if auth_enabled %}
+      <a href="/logout" class="nav-link">Logout</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <div id="persistent-player" class="persistent-player" style="display:none">
+    <div class="pp-info">
+      <span class="pp-title" id="pp-title">—</span>
+      <span class="pp-progress" id="pp-progress">0:00 / 0:00</span>
+    </div>
+    <div class="pp-controls">
+      <button class="pp-btn" id="pp-skip-back" title="−10s">«10</button>
+      <button class="pp-btn pp-play" id="pp-play">▶</button>
+      <button class="pp-btn" id="pp-skip-fwd" title="+10s">10»</button>
+      <input type="range" id="pp-seek" min="0" max="100" value="0" step="0.1" class="pp-seek" />
+      <select id="pp-speed" class="pp-speed" title="Playback speed">
+        <option value="0.75">0.75×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+        <option value="1.75">1.75×</option>
+        <option value="2">2×</option>
+      </select>
+    </div>
+  </div>
+
+  <audio id="main-audio"></audio>
+
+  <script src="/static/app.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

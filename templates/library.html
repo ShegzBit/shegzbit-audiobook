@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Library — Web Novel TTS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Library</h1>
+  <p class="page-sub">All tracked novels and their chapters.</p>
+</div>
+
+{% if not novel_data %}
+<div class="card empty-state">
+  <div class="empty-icon">📚</div>
+  <p>No novels in your library yet.</p>
+  <a href="/" class="btn btn-primary">Add a Chapter</a>
+</div>
+{% else %}
+
+{% for item in novel_data %}
+<div class="card novel-card">
+  <div class="novel-header">
+    <div>
+      <h2 class="novel-title">{{ item.novel.title }}</h2>
+      <div class="novel-meta">
+        <span class="tag">{{ item.episode_count }} chapter{% if item.episode_count != 1 %}s{% endif %}</span>
+        {% if item.novel.source_index_url %}
+        <a href="{{ item.novel.source_index_url }}" target="_blank" class="tag tag-link">Index ↗</a>
+        {% endif %}
+        <a href="/rss/{{ item.novel.id }}.xml" target="_blank" class="tag tag-link">RSS 🎙</a>
+      </div>
+    </div>
+    {% if item.latest and item.latest.chapter %}
+    <button class="btn btn-primary"
+            onclick="playEpisode({{ item.latest.id }}, '{{ item.latest.chapter.audio_url }}',
+                     {{ item.latest.listened_position_seconds }},
+                     '{{ item.latest.chapter.title | replace("'", "\\'") }}',
+                     {{ item.latest.chapter.word_count }},
+                     {{ item.novel.id }})">
+      ▶ Continue
+    </button>
+    {% endif %}
+  </div>
+
+  {% if item.episodes %}
+  <div class="episode-list">
+    {% for ep in item.episodes %}
+    <div class="episode-row {% if ep.listened_position_seconds > 0 %}ep-started{% endif %}">
+      <div class="ep-info">
+        <span class="ep-title">
+          {% if ep.chapter %}
+            {{ ep.chapter.title }}
+          {% else %}
+            <em class="muted">Processing…</em>
+          {% endif %}
+        </span>
+        {% if ep.chapter %}
+        <span class="ep-meta">{{ ep.chapter.word_count | default(0) }} words</span>
+        {% endif %}
+        {% if ep.listened_position_seconds > 0 and ep.chapter %}
+        <span class="ep-progress-text">
+          {{ "%.0f"|format(ep.listened_position_seconds // 60) }}:{{ "%02.0f"|format(ep.listened_position_seconds % 60) }} in
+        </span>
+        {% endif %}
+      </div>
+      <div class="ep-actions">
+        {% if ep.chapter %}
+        <button class="btn btn-sm btn-secondary"
+                onclick="playEpisode({{ ep.id }}, '{{ ep.chapter.audio_url }}',
+                         {{ ep.listened_position_seconds }},
+                         '{{ ep.chapter.title | replace("'", "\\'") }}',
+                         {{ ep.chapter.word_count }},
+                         {{ item.novel.id }})">
+          {% if ep.listened_position_seconds > 0 %}Resume{% else %}Play{% endif %}
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const PAGE = 'library';
+
+  function playEpisode(episodeId, audioUrl, startPos, title, wordCount, novelId) {
+    window._player.loadEpisode({
+      episodeId, audioUrl, startPos,
+      title, wordCount, novelId,
+    });
+  }
+</script>
+{% endblock %}
