@@ -1,0 +1,48 @@
+[32mINFO[0m:     Started server process [[36m1379[0m]
+[32mINFO[0m:     Waiting for application startup.
+[32mINFO[0m:     Application startup complete.
+[32mINFO[0m:     Uvicorn running on [1mhttp://0.0.0.0:5000[0m (Press CTRL+C to quit)
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /static/app.js HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /static/style.css HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45712 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45712 - "[1mGET /static/style.css HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45714 - "[1mGET /static/app.js HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45714 - "[1mGET /library HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     127.0.0.1:43240 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:43240 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     127.0.0.1:43240 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     127.0.0.1:51804 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:35866 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:44460 - "[1mGET /api/jobs/4d20685e-0742-4f09-a27a-6ddf96928728 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     127.0.0.1:54840 - "[1mGET /api/jobs/4d20685e-0742-4f09-a27a-6ddf96928728 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/21c2b4ce-32b2-4efe-8da2-45cd7afedc27 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mPOST /api/jobs/21c2b4ce-32b2-4efe-8da2-45cd7afedc27/retry HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/859c9a7e-6ff3-4e56-b236-7a98fe46b7e4 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mPOST /api/jobs/859c9a7e-6ff3-4e56-b236-7a98fe46b7e4/retry HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/683eae67-800e-402c-ac31-c2e0eac3c4f2 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mPOST /api/jobs/683eae67-800e-402c-ac31-c2e0eac3c4f2/retry HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/1e2195ed-4acf-48ba-860d-04234cb6e5ae HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mPOST /api/jobs/1e2195ed-4acf-48ba-860d-04234cb6e5ae/retry HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/cc4ddbf4-3313-4025-b506-343d67140ae1 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mPOST /api/jobs/cc4ddbf4-3313-4025-b506-343d67140ae1/retry HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/3ee66394-0c6c-4ed8-a10c-768a6e71b986 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/1814d67c-3826-4624-89ea-cf20575242fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mPOST /api/jobs/1814d67c-3826-4624-89ea-cf20575242fc/retry HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/24ed201b-86a4-4ca6-9a55-9a18cd0d59a6 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /library HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     Shutting down
+[32mINFO[0m:     Waiting for application shutdown.
+[32mINFO[0m:     Application shutdown complete.
+[32mINFO[0m:     Finished server process [[36m1379[0m]

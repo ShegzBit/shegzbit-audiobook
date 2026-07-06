@@ -1,0 +1,414 @@
+[32mINFO[0m:     Started server process [[36m2217[0m]
+[32mINFO[0m:     Waiting for application startup.
+[32mINFO[0m:     Application startup complete.
+[32mINFO[0m:     Uvicorn running on [1mhttp://0.0.0.0:5000[0m (Press CTRL+C to quit)
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     127.0.0.1:53958 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:56848 - "[1mGET /api/jobs/95ec563d-6cef-43e0-b69d-a257d34e22b4 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:50594 - "[1mGET /api/jobs/95ec563d-6cef-43e0-b69d-a257d34e22b4 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:38476 - "[1mGET /api/jobs/95ec563d-6cef-43e0-b69d-a257d34e22b4 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /library HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/c95f8571-b762-431d-8064-b4c4eb1e34a8 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /static/style.css HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /library HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /static/style.css HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /static/app.js HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /favicon.ico HTTP/1.1[0m" [31m404 Not Found[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /rss/1.xml HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/95bc8999-dc6f-46be-a0ea-2565968eebab HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /output/untitled_chapter_enusbrianneu_10.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /output/untitled_chapter_enusbrianneu_10.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /library HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/98893b63-f807-43fb-93e3-cb499b2ff7fc HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/7e4ab1e2-69ac-45a9-b976-4bd8fe0f8c63 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /output/untitled_chapter_enusbrianneu_0.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/af714d96-f943-4608-9895-3a65da71a612 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/62ab4ae6-20b0-424c-bc80-5ea69453fbf1 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/ecbe6973-907d-4c68-86fd-6c5b08a264af HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /output/chapter_1_handsome_guy_80_a_night_to_get_a_girl_enusbrianneu_0.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mPOST /api/novels/1/queue-next HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mPOST /api/episodes/1/position HTTP/1.1[0m" [31m405 Method Not Allowed[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/46e7a8c0-d1bc-40a6-875d-0ecf06cda740 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /output/untitled_chapter_enusbrianneu_0.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /output/untitled_chapter_enusbrianneu_0.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /api/jobs/4c655a1e-a287-4f05-ba38-ed99203a3201 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.8.7:0 - "[1mGET /output/untitled_chapter_enusbrianneu_0.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET / HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.7.5:0 - "[1mGET /static/style.css HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.0.10:0 - "[1mGET /static/app.js HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.6.25:0 - "[1mPOST /api/chapters HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /api/jobs/06498985-4901-42d3-91a3-3fa54ddc4c5f HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     10.54.3.7:0 - "[1mGET /output/untitled_chapter_enusbrianneu_0.mp3 HTTP/1.1[0m" [33m304 Not Modified[0m
+[32mINFO[0m:     10.54.5.7:0 - "[1mGET /output/untitled_chapter_enusbrianneu_0.mp3 HTTP/1.1[0m" [32m206 Partial Content[0m
+[32mINFO[0m:     Shutting down
+[32mINFO[0m:     Waiting for application shutdown.
+[32mINFO[0m:     Application shutdown complete.
+[32mINFO[0m:     Finished server process [[36m2217[0m]
