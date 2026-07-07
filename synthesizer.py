@@ -35,12 +35,18 @@ async def _synthesize_chunk(text: str, voice: str, rate: str, out_path: str):
     await communicate.save(out_path)
 
 
-async def _synthesize_all(chunks: list[str], voice: str, rate: str, tmp_dir: str) -> list[str]:
+async def _synthesize_all(
+    chunks: list[str], voice: str, rate: str, tmp_dir: str,
+    progress_callback=None,
+) -> list[str]:
     paths = []
+    total = len(chunks)
     for i, chunk in enumerate(chunks):
         out_path = os.path.join(tmp_dir, f"part_{i:04d}.mp3")
         await _synthesize_chunk(chunk, voice, rate, out_path)
         paths.append(out_path)
+        if progress_callback:
+            progress_callback(i + 1, total)
     return paths
 
 
@@ -59,6 +65,7 @@ def synthesize(
     voice: str = "en-US-BrianNeural",
     rate: str = "+0%",
     title: str = "chapter",
+    progress_callback=None,
 ) -> Path:
     OUTPUT_DIR.mkdir(exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")[:60]
@@ -70,7 +77,10 @@ def synthesize(
     chunks = chunk_text(text)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        paths = asyncio.run(_synthesize_all(chunks, voice, rate, tmp_dir))
+        paths = asyncio.run(
+            _synthesize_all(chunks, voice, rate, tmp_dir,
+                            progress_callback=progress_callback)
+        )
         audio = stitch_audio(paths)
         audio.export(str(out_path), format="mp3")
 

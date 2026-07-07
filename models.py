@@ -15,6 +15,8 @@ class Job(Base):
     rate = Column(String(20), nullable=False)
     status = Column(String(30), nullable=False, default="queued")
     error_msg = Column(Text, nullable=True)
+    progress_pct = Column(Integer, nullable=True)
+    progress_msg = Column(String(200), nullable=True)
     chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

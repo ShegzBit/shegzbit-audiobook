@@ -215,6 +215,8 @@ async def get_job(job_id: str, request: Request, db: Session = Depends(get_db)):
         "status": job.status,
         "url": job.url,
         "error": job.error_msg,
+        "progress_pct": job.progress_pct,
+        "progress_msg": job.progress_msg,
         "created_at": job.created_at.isoformat() if job.created_at else None,
     }
 

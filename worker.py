@@ -113,7 +113,15 @@ def process_job(job_id: str):
 
         # Synthesize
         _set_status(job_id, "synthesizing")
-        audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title)
+
+        def _on_synthesis_progress(current: int, total: int):
+            pct = int(current / total * 100)
+            _set_status(job_id, "synthesizing",
+                        progress_pct=pct,
+                        progress_msg=f"Chunk {current} of {total}")
+
+        audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
+                                progress_callback=_on_synthesis_progress)
 
         # Save chapter record and update job
         db2 = SessionLocal()

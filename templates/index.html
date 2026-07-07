@@ -33,19 +33,26 @@
     </div>
   </div>
 
-  <div class="row-2 toggles-row">
+  <div class="toggles-row">
     <div class="field toggle-field">
       <label class="toggle-label">
         <input type="checkbox" id="toggle-auto-queue" checked />
         <span class="toggle-slider"></span>
-        <span class="toggle-text">Auto-queue next chapter</span>
+        <span class="toggle-text">Auto-queue</span>
       </label>
     </div>
     <div class="field toggle-field">
       <label class="toggle-label">
         <input type="checkbox" id="toggle-auto-download" checked />
         <span class="toggle-slider"></span>
-        <span class="toggle-text">Auto-download audio</span>
+        <span class="toggle-text">Auto-download</span>
+      </label>
+    </div>
+    <div class="field toggle-field">
+      <label class="toggle-label">
+        <input type="checkbox" id="toggle-auto-play" checked />
+        <span class="toggle-slider"></span>
+        <span class="toggle-text">Auto-play</span>
       </label>
     </div>
   </div>
@@ -59,8 +66,14 @@
       <div class="spinner" id="status-spinner"></div>
       <span id="status-label" class="status-label">Queued…</span>
     </div>
+    <div id="progress-bar-wrap" class="progress-bar-wrap" style="display:none">
+      <div class="progress-track">
+        <div id="progress-bar-fill" class="progress-fill" style="width:0%"></div>
+        <span id="progress-pct" class="progress-pct">0%</span>
+      </div>
+      <span id="progress-msg" class="progress-msg"></span>
+    </div>
     <div id="captcha-block" class="captcha-block" style="display:none">
-      <div class="captcha-icon">🔒</div>
       <div class="captcha-text">
         <strong>Human verification needed</strong>
         <p>This site is blocking automated access. Open the chapter URL in your browser,
@@ -68,13 +81,12 @@
       </div>
       <div class="captcha-actions">
         <a id="captcha-open-link" href="#" target="_blank" class="btn btn-secondary">
-          Open in Browser ↗
+          Open in Browser
         </a>
         <button id="btn-retry" class="btn btn-primary">Retry</button>
       </div>
     </div>
     <div id="error-block" class="error-block" style="display:none">
-      <span class="error-icon">⚠</span>
       <span id="error-msg"></span>
       <button id="btn-retry-error" class="btn btn-sm btn-secondary" style="margin-left:.5rem">Retry</button>
     </div>
@@ -90,13 +102,13 @@
         <span class="tag" id="player-dur">— min</span>
       </div>
     </div>
-    <a id="player-download" href="#" download class="btn btn-sm btn-secondary">⬇ Download</a>
+    <a id="player-download" href="#" download class="btn btn-sm btn-secondary">Download</a>
   </div>
   <p class="player-hint">Audio controls appear in the bar at the bottom of the page.</p>
   <div id="next-chapter-row" class="next-row" style="display:none">
     <span class="next-label">Next chapter detected —</span>
     <button id="btn-queue-next" class="btn btn-sm btn-primary">Queue it now</button>
-    <span id="next-queued-msg" style="display:none" class="status-ok">✓ Queuing…</span>
+    <span id="next-queued-msg" style="display:none" class="status-ok">Queuing…</span>
   </div>
 </div>
 

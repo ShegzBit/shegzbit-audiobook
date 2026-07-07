@@ -40,10 +40,10 @@ const _player = (() => {
   }
 
   audio.addEventListener('timeupdate', updateProgress);
-  audio.addEventListener('play', () => { ppPlay.textContent = '⏸'; });
-  audio.addEventListener('pause', () => { ppPlay.textContent = '▶'; savePosition(); });
+  audio.addEventListener('play', () => { ppPlay.classList.add('is-playing'); });
+  audio.addEventListener('pause', () => { ppPlay.classList.remove('is-playing'); savePosition(); });
   audio.addEventListener('ended', () => {
-    ppPlay.textContent = '▶';
+    ppPlay.classList.remove('is-playing');
     savePosition();
     if (typeof window._onAudioEnded === 'function') window._onAudioEnded();
   });
@@ -61,7 +61,7 @@ const _player = (() => {
   // Auto-save every 15s
   setInterval(() => { if (!audio.paused) savePosition(); }, 15000);
 
-  function loadEpisode({ episodeId: eid, audioUrl, startPos, title, wordCount, novelId: nid }) {
+  function loadEpisode({ episodeId: eid, audioUrl, startPos, title, wordCount, novelId: nid, autoPlay = true }) {
     episodeId = eid;
     novelId   = nid;
 
@@ -74,7 +74,9 @@ const _player = (() => {
     ppProg.textContent  = `${fmt(startPos || 0)} / …`;
     bar.style.display   = 'flex';
 
-    audio.play().catch(() => {});
+    if (autoPlay) {
+      audio.play().catch(() => {});
+    }
   }
 
   return { loadEpisode, getNovelId: () => novelId, getEpisodeId: () => episodeId };
@@ -108,9 +110,14 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   const nextRow       = document.getElementById('next-chapter-row');
   const btnQueueNext  = document.getElementById('btn-queue-next');
   const nextQueuedMsg = document.getElementById('next-queued-msg');
+  const progressWrap  = document.getElementById('progress-bar-wrap');
+  const progressFill  = document.getElementById('progress-bar-fill');
+  const progressPct   = document.getElementById('progress-pct');
+  const progressMsg   = document.getElementById('progress-msg');
 
   const toggleAutoQueue     = document.getElementById('toggle-auto-queue');
   const toggleAutoDownload  = document.getElementById('toggle-auto-download');
+  const toggleAutoPlay      = document.getElementById('toggle-auto-play');
 
   function initToggle(toggleEl, key, defaultVal) {
     const stored = localStorage.getItem(key);
@@ -120,10 +127,19 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   }
   initToggle(toggleAutoQueue,    'auto-queue-enabled',    true);
   initToggle(toggleAutoDownload, 'auto-download-enabled', true);
+  initToggle(toggleAutoPlay,     'auto-play-enabled',     true);
 
   let pollingInterval = null;
   let currentJobId    = null;
   let currentJobData  = null;
+  let jobDone         = false;
+
+  function saveActiveJob(id) {
+    localStorage.setItem('activeJobId', id || currentJobId || '');
+  }
+  function clearActiveJob() {
+    localStorage.removeItem('activeJobId');
+  }
 
   rateRange.addEventListener('input', () => {
     const v = parseInt(rateRange.value);
@@ -145,12 +161,28 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     btnSubmit.textContent = busy ? 'Working…' : 'Generate Audio';
   }
 
+  function playDing() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (_) {}
+  }
+
   const STATUS_LABELS = {
     queued:           'Queued…',
     fetching:         'Fetching page…',
     extracting:       'Extracting chapter text…',
     synthesizing:     'Synthesizing audio (this takes a minute)…',
-    done:             '✓ Ready!',
+    done:             'Ready',
     error:            'Error',
     captcha_blocked:  'Verification required',
   };
@@ -175,6 +207,19 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     if (status === 'error') {
       errorBlock.style.display = 'flex';
       errorMsg.textContent = data?.error || 'An unexpected error occurred.';
+    }
+
+    if (status === 'synthesizing' && data?.progress_pct != null) {
+      progressWrap.style.display = 'block';
+      progressFill.style.width = data.progress_pct + '%';
+      progressPct.textContent = data.progress_pct + '%';
+      if (data.progress_msg) {
+        progressMsg.textContent = data.progress_msg + ' \u00b7 ' + data.progress_pct + '%';
+      } else {
+        progressMsg.textContent = data.progress_pct + '%';
+      }
+    } else {
+      progressWrap.style.display = 'none';
     }
   }
 
@@ -208,7 +253,12 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
       title:      chapter.title,
       wordCount:  chapter.word_count,
       novelId:    chapter.novel_id,
+      autoPlay:   toggleAutoPlay.checked,
     });
+
+    if (!toggleAutoPlay.checked) {
+      playDing();
+    }
 
     // Auto-queue next when audio ends
     window._onAudioEnded = () => {
@@ -228,6 +278,8 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
       showStatus(data.status, data);
 
       if (data.status === 'done') {
+        if (jobDone) return;
+        jobDone = true;
         clearInterval(pollingInterval);
         setSubmitBusy(false);
         showPlayer(data.chapter, data.episode);
@@ -252,6 +304,8 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     const url = urlInput.value.trim();
     if (!url) { urlInput.focus(); return; }
 
+    jobDone = false;
+    clearActiveJob();
     setSubmitBusy(true);
     playerCard.style.display = 'none';
     jobStatus.style.display  = 'none';
@@ -272,6 +326,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
 
     const { job_id } = await resp.json();
     currentJobId = job_id;
+    saveActiveJob(job_id);
     showStatus('queued', {});
     pollingInterval = setInterval(() => pollJob(job_id), 1500);
   }
@@ -282,6 +337,8 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     if (!resp.ok) return;
     const { job_id } = await resp.json();
     currentJobId = job_id;
+    jobDone = false;
+    saveActiveJob(job_id);
     setSubmitBusy(true);
     showStatus('queued', {});
     clearInterval(pollingInterval);
@@ -299,6 +356,8 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
       const data = await resp.json();
       if (data.job_id) {
         currentJobId = data.job_id;
+        jobDone = false;
+        saveActiveJob(data.job_id);
         urlInput.value = data.next_url || '';
         setSubmitBusy(true);
         showStatus('queued', {});
@@ -308,8 +367,39 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     } catch (e) { console.error('Auto-queue error:', e); }
   }
 
+  async function restoreActiveJob() {
+    const savedId = localStorage.getItem('activeJobId');
+    if (!savedId) return;
+    try {
+      const resp = await fetch(`/api/jobs/${savedId}`);
+      if (!resp.ok) { clearActiveJob(); return; }
+      const data = await resp.json();
+      currentJobId = savedId;
+      currentJobData = data;
+
+      if (data.status === 'done') {
+        jobDone = true;
+        setSubmitBusy(false);
+        showStatus('done', data);
+        showPlayer(data.chapter, data.episode);
+        return;
+      }
+
+      if (['error', 'captcha_blocked'].includes(data.status)) {
+        setSubmitBusy(false);
+        showStatus(data.status, data);
+        return;
+      }
+
+      showStatus(data.status, data);
+      saveActiveJob(savedId);
+      pollingInterval = setInterval(() => pollJob(savedId), 1500);
+    } catch (_) { clearActiveJob(); }
+  }
+
   btnSubmit.addEventListener('click', submitChapter);
   urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitChapter(); });
+  restoreActiveJob();
 
   btnRetry.addEventListener('click', () => retryJob(currentJobId));
   btnRetryErr.addEventListener('click', () => retryJob(currentJobId));

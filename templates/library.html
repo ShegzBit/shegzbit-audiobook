@@ -9,8 +9,7 @@
 
 {% if not novel_data %}
 <div class="card empty-state">
-  <div class="empty-icon">📚</div>
-  <p>No novels in your library yet.</p>
+  <p class="empty-desc">No novels in your library yet.</p>
   <a href="/" class="btn btn-primary">Add a Chapter</a>
 </div>
 {% else %}
@@ -23,9 +22,9 @@
       <div class="novel-meta">
         <span class="tag">{{ item.episode_count }} chapter{% if item.episode_count != 1 %}s{% endif %}</span>
         {% if item.novel.source_index_url %}
-        <a href="{{ item.novel.source_index_url }}" target="_blank" class="tag tag-link">Index ↗</a>
+        <a href="{{ item.novel.source_index_url }}" target="_blank" class="tag tag-link">Index</a>
         {% endif %}
-        <a href="/rss/{{ item.novel.id }}.xml" target="_blank" class="tag tag-link">RSS 🎙</a>
+        <a href="/rss/{{ item.novel.id }}.xml" target="_blank" class="tag tag-link">RSS</a>
       </div>
     </div>
     {% if item.latest and item.latest.chapter %}
@@ -35,7 +34,7 @@
                      '{{ item.latest.chapter.title | replace("'", "\\'") }}',
                      {{ item.latest.chapter.word_count }},
                      {{ item.novel.id }})">
-      ▶ Continue
+      Continue
     </button>
     {% endif %}
   </div>
