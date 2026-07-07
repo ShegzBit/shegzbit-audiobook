@@ -109,6 +109,18 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   const btnQueueNext  = document.getElementById('btn-queue-next');
   const nextQueuedMsg = document.getElementById('next-queued-msg');
 
+  const toggleAutoQueue     = document.getElementById('toggle-auto-queue');
+  const toggleAutoDownload  = document.getElementById('toggle-auto-download');
+
+  function initToggle(toggleEl, key, defaultVal) {
+    const stored = localStorage.getItem(key);
+    const val = stored !== null ? stored === 'true' : defaultVal;
+    toggleEl.checked = val;
+    toggleEl.addEventListener('change', () => localStorage.setItem(key, toggleEl.checked));
+  }
+  initToggle(toggleAutoQueue,    'auto-queue-enabled',    true);
+  initToggle(toggleAutoDownload, 'auto-download-enabled', true);
+
   let pollingInterval = null;
   let currentJobId    = null;
   let currentJobData  = null;
@@ -175,9 +187,16 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     playerDl.download         = chapter.title.replace(/[^a-z0-9 ]/gi, '_') + '.mp3';
 
     if (chapter.next_chapter_url) {
-      nextRow.style.display = 'flex';
-      nextQueuedMsg.style.display = 'none';
-      btnQueueNext.disabled = false;
+      if (toggleAutoQueue.checked) {
+        nextRow.style.display = 'none';
+        if (chapter.novel_id && episode?.id) {
+          autoQueueNext(chapter.novel_id, episode.id);
+        }
+      } else {
+        nextRow.style.display = 'flex';
+        nextQueuedMsg.style.display = 'none';
+        btnQueueNext.disabled = false;
+      }
     } else {
       nextRow.style.display = 'none';
     }
@@ -193,7 +212,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
 
     // Auto-queue next when audio ends
     window._onAudioEnded = () => {
-      if (chapter.novel_id && episode?.id) {
+      if (toggleAutoQueue.checked && chapter.novel_id && episode?.id) {
         autoQueueNext(chapter.novel_id, episode.id);
       }
     };
@@ -212,6 +231,14 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
         clearInterval(pollingInterval);
         setSubmitBusy(false);
         showPlayer(data.chapter, data.episode);
+        if (toggleAutoDownload.checked && data.chapter?.audio_url) {
+          const a = document.createElement('a');
+          a.href = data.chapter.audio_url;
+          a.download = data.chapter.title?.replace(/[^a-z0-9 ]/gi, '_') + '.mp3' || 'audio.mp3';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
       } else if (['error', 'captcha_blocked'].includes(data.status)) {
         clearInterval(pollingInterval);
         setSubmitBusy(false);

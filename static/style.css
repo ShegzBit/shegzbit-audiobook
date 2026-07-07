@@ -14,6 +14,8 @@
   --warn:      #fbbf24;
   --radius:    12px;
   --pp-height: 64px;
+  --toggle-bg: #2e3350;
+  --toggle-on: #7c6af7;
 }
 
 html { scroll-behavior: smooth; }
@@ -106,6 +108,34 @@ label {
   width: 18px; height: 18px; border-radius: 50%;
   background: var(--accent); cursor: pointer;
 }
+
+/* ---- Toggle switches ---- */
+.toggles-row { margin-top: 1rem; }
+.toggle-field { display: flex; align-items: center; }
+.toggle-label {
+  display: flex; align-items: center; gap: .65rem; cursor: pointer;
+  user-select: none;
+}
+.toggle-label input {
+  position: absolute; opacity: 0; width: 0; height: 0;
+}
+.toggle-slider {
+  position: relative; width: 38px; height: 22px; flex-shrink: 0;
+  background: var(--toggle-bg); border-radius: 11px;
+  transition: background .2s;
+}
+.toggle-slider::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--muted); transition: transform .2s, background .2s;
+}
+.toggle-label input:checked + .toggle-slider {
+  background: var(--toggle-on);
+}
+.toggle-label input:checked + .toggle-slider::after {
+  transform: translateX(16px); background: #fff;
+}
+.toggle-text { font-size: .82rem; color: var(--text); white-space: nowrap; }
 
 /* ---- Buttons ---- */
 .btn-row { display: flex; gap: .75rem; margin-top: 1.25rem; }
