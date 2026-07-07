@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Web Novel TTS", lifespan=lifespan)
+os.makedirs("output", exist_ok=True)
 app.mount("/output", StaticFiles(directory="output"), name="output")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 _jinja_env = Environment(loader=FileSystemLoader("templates"), autoescape=True, cache_size=0)
