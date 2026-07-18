@@ -1,6 +1,8 @@
 """
 worker.py — Background job queue using ThreadPoolExecutor + SQLite.
 No Redis required; jobs are persisted in the DB so status survives queries.
+
+Uses the new modular scraping pipeline with configurable retries.
 """
 
 import logging
@@ -13,13 +15,14 @@ from datetime import datetime
 from threading import Lock
 from typing import Optional
 
-from curl_cffi import requests as cffi_requests
 from curl_cffi.requests.exceptions import HTTPError, RequestException
 
 from browser import manager as browser_manager
 from database import SessionLocal
-from extractor import CaptchaError, extract_chapter, fetch_html, is_captcha_page
+from errors import CaptchaError, EmptyExtractionError, HttpError, NetworkError, ScrapingError
+from extractor import extract_chapter, fetch_html
 from models import Chapter, Episode, Job, Novel
+from retry import retry
 from synthesizer import synthesize
 
 logger = logging.getLogger(__name__)
@@ -76,7 +79,83 @@ def _find_or_create_novel(db, novel_title: Optional[str], novel_index_url: Optio
     return novel
 
 
+# ── Retry-wrapped fetch + extract ───────────────────────────────────────────
+
+@retry(
+    max_attempts=3,
+    backoff_base=2.0,
+    retryable_errors=(NetworkError,),
+)
+def _fetch_with_retry(url: str) -> str:
+    """Fetch HTML with automatic retries on transient network errors."""
+    return fetch_html(url)
+
+
+@retry(
+    max_attempts=2,
+    backoff_base=3.0,
+    retryable_errors=(NetworkError,),
+)
+def _extract_with_retry(url: str, html: str):
+    """Extract chapter with retry on transient errors."""
+    return extract_chapter(url, html)
+
+
+# ── Job processing ──────────────────────────────────────────────────────────
+
+def _save_chapter_record(job_id: str, chapter, db=None):
+    """Save the completed chapter and episode records to the DB."""
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return
+
+        novel = _find_or_create_novel(db, chapter.novel_title, chapter.novel_index_url)
+
+        ch = Chapter(
+            url_hash=str(uuid.uuid4()),
+            url=job.url,
+            voice=job.voice,
+            rate=job.rate,
+            title=chapter.title,
+            word_count=chapter.word_count,
+            audio_path=chapter.audio_path if hasattr(chapter, "audio_path") else "",
+            next_chapter_url=chapter.next_chapter_url,
+            novel_id=novel.id if novel else None,
+        )
+        db.add(ch)
+        db.flush()
+
+        if novel:
+            ep = db.query(Episode).filter(
+                Episode.novel_id == novel.id,
+                Episode.chapter_url == job.url,
+            ).first()
+            if not ep:
+                ep = Episode(
+                    novel_id=novel.id,
+                    chapter_id=ch.id,
+                    chapter_url=job.url,
+                )
+                db.add(ep)
+            elif not ep.chapter_id:
+                ep.chapter_id = ch.id
+
+        job.status = "done"
+        job.chapter_id = ch.id
+        job.updated_at = datetime.utcnow()
+        db.commit()
+    finally:
+        if close_db:
+            db.close()
+
+
 def process_job(job_id: str):
+    """Process a single scrape + synthesize job."""
     db = SessionLocal()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -88,28 +167,30 @@ def process_job(job_id: str):
         _rate_limit_domain(job.url)
 
         try:
-            html = fetch_html(job.url)
-        except HTTPError as e:
-            code = e.response.status_code if e.response is not None else 0
-            if code in (403, 429):
-                _set_status(job_id, "captcha_blocked",
-                            error_msg=f"HTTP {code} — the site may require captcha verification.")
-                return
-            _set_status(job_id, "error", error_msg=f"HTTP error {code}: {e}")
-            return
-        except RequestException as e:
-            _set_status(job_id, "error", error_msg=f"Network error: {e}")
-            return
-
-        # Extract (captcha detection is deferred inside extract_chapter — we try
-        # to pull text first and only raise CaptchaError if extraction fails)
-        _set_status(job_id, "extracting")
-        try:
-            chapter = extract_chapter(job.url, html)
+            html = _fetch_with_retry(job.url)
         except CaptchaError as e:
             _set_status(job_id, "captcha_blocked", error_msg=str(e))
             return
-        except ValueError as e:
+        except HttpError as e:
+            _set_status(job_id, "error",
+                        error_msg=f"HTTP error {e.status_code}: {e}")
+            return
+        except NetworkError as e:
+            _set_status(job_id, "error",
+                        error_msg=f"Network error after retries: {e}")
+            return
+
+        # Extract
+        _set_status(job_id, "extracting")
+        try:
+            chapter = _extract_with_retry(job.url, html)
+        except CaptchaError as e:
+            _set_status(job_id, "captcha_blocked", error_msg=str(e))
+            return
+        except EmptyExtractionError as e:
+            _set_status(job_id, "error", error_msg=str(e))
+            return
+        except ScrapingError as e:
             _set_status(job_id, "error", error_msg=str(e))
             return
 
@@ -125,11 +206,10 @@ def process_job(job_id: str):
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress)
 
-        # Save chapter record and update job
+        # Save
         db2 = SessionLocal()
         try:
             job2 = db2.query(Job).filter(Job.id == job_id).first()
-
             novel = _find_or_create_novel(db2, chapter.novel_title, chapter.novel_index_url)
 
             ch = Chapter(
@@ -176,24 +256,26 @@ def process_job(job_id: str):
 
 
 def process_job_from_html(job_id: str, html: str):
+    """Process a job with pre-fetched HTML (manual paste flow)."""
     db = SessionLocal()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             return
 
-        # Extract
         _set_status(job_id, "extracting")
         try:
             chapter = extract_chapter(job.url, html)
         except CaptchaError as e:
             _set_status(job_id, "captcha_blocked", error_msg=str(e))
             return
-        except ValueError as e:
+        except EmptyExtractionError as e:
+            _set_status(job_id, "error", error_msg=str(e))
+            return
+        except ScrapingError as e:
             _set_status(job_id, "error", error_msg=str(e))
             return
 
-        # Synthesize
         _set_status(job_id, "synthesizing")
 
         def _on_synthesis_progress(current: int, total: int):
@@ -205,11 +287,9 @@ def process_job_from_html(job_id: str, html: str):
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress)
 
-        # Save chapter record and update job
         db2 = SessionLocal()
         try:
             job2 = db2.query(Job).filter(Job.id == job_id).first()
-
             novel = _find_or_create_novel(db2, chapter.novel_title, chapter.novel_index_url)
 
             ch = Chapter(
