@@ -208,6 +208,24 @@ label {
 .captcha-text strong { color: var(--warn); }
 .captcha-text p { color: var(--muted); font-size: .87rem; margin-top: .3rem; }
 .captcha-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+.paste-html-section { margin-top: .75rem; }
+.paste-label { font-size: .82rem; color: var(--muted); margin-bottom: .5rem; }
+.paste-textarea {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: .82rem;
+  padding: .6rem .9rem;
+  outline: none;
+  transition: border-color .2s;
+  resize: vertical;
+  min-height: 120px;
+}
+.paste-textarea:focus { border-color: var(--accent); }
+.paste-html-section .btn { margin-top: .5rem; }
 
 /* Error block */
 .error-block {

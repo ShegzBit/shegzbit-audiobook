@@ -3,12 +3,17 @@ extractor.py — Chapter text extraction from web novel URLs.
 Provides extract_chapter() as the single entry point.
 """
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Optional
 from urllib.parse import urljoin
 
-import requests
+from curl_cffi import requests as cffi_requests
+
+from browser import manager as browser_manager
+
+logger = logging.getLogger(__name__)
 from bs4 import BeautifulSoup
 
 try:
@@ -67,6 +72,11 @@ CAPTCHA_MARKERS = [
     "cf-challenge", "g-recaptcha", "cf-turnstile",
     "just a moment", "checking your browser", "ddos-guard",
     "please verify you are human", "enable javascript and cookies",
+    "security verification", "verifies you are not a bot",
+    "verifies you're not a bot", "security service to protect",
+    "checking if the site connection is secure",
+    "please wait while we verify", "browser verification",
+    "access denied", "request rejected", "bot detection",
 ]
 
 
@@ -86,9 +96,16 @@ class ChapterText:
 
 
 def fetch_html(url: str) -> str:
-    resp = requests.get(url, headers=HEADERS, timeout=20)
-    resp.raise_for_status()
-    return resp.text
+    try:
+        resp = cffi_requests.get(url, headers=HEADERS, timeout=20, impersonate="chrome")
+        resp.raise_for_status()
+        html = resp.text
+        if not is_captcha_page(html):
+            return html
+        logger.info("curl_cffi got captcha page, falling back to Playwright for %s", url)
+    except Exception as e:
+        logger.info("curl_cffi failed (%s), falling back to Playwright for %s", e, url)
+    return browser_manager.fetch(url)
 
 
 def is_captcha_page(html: str) -> bool:
@@ -125,22 +142,44 @@ def extract_with_trafilatura(html: str) -> Optional[str]:
     )
 
 
-def extract_with_bs4_heuristic(html: str) -> str:
+def extract_with_bs4_heuristic(html: str) -> Optional[str]:
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(NOISE_SELECTORS):
         tag.decompose()
+
+    # Strategy 1: find largest div/article/section
     candidates = soup.find_all(["div", "article", "section"])
     best, best_len = None, 0
     for c in candidates:
         t = c.get_text(" ", strip=True)
         if len(t) > best_len:
             best, best_len = c, len(t)
-    if best is None:
-        return soup.get_text(" ", strip=True)
-    paragraphs = best.find_all("p")
-    if paragraphs:
-        return "\n\n".join(p.get_text(" ", strip=True) for p in paragraphs)
-    return best.get_text("\n\n", strip=True)
+    if best and best_len > 200:
+        paragraphs = best.find_all("p")
+        if paragraphs:
+            text = "\n\n".join(p.get_text(" ", strip=True) for p in paragraphs)
+            if len(text) > 200:
+                return text
+        text = best.get_text("\n\n", strip=True)
+        if len(text) > 200:
+            return text
+
+    # Strategy 2: collect all <p> tags from the whole page
+    all_paragraphs = soup.find_all("p")
+    if all_paragraphs:
+        text = "\n\n".join(p.get_text(" ", strip=True) for p in all_paragraphs)
+        if len(text) > 200:
+            return text
+
+    # Strategy 3: find any element with substantial text
+    for tag in soup.find_all(True):
+        t = tag.get_text(" ", strip=True)
+        if len(t) > 200 and tag.name not in ("html", "body", "head"):
+            return t
+
+    # Strategy 4: last resort — full page text
+    text = soup.get_text(" ", strip=True)
+    return text if len(text) > 200 else None
 
 
 def clean_text(raw: str) -> str:
@@ -229,34 +268,45 @@ def detect_novel_info(html: str, chapter_url: str) -> dict:
 def extract_chapter(url: str, html: Optional[str] = None) -> ChapterText:
     """Main entry point. Fetch (if needed), extract, clean and return ChapterText.
 
-    Captcha detection is intentionally deferred: we always attempt extraction
-    first. Only if extraction yields too little text AND captcha markers are
-    present do we raise CaptchaError. This avoids false positives on sites like
-    fanmtl.com / wuxiaspot.com where Cloudflare injects challenge scripts into
-    the HTML while the chapter content is still present on the page.
+    Checks for captcha/challenge pages early — before attempting extraction —
+    so we never synthesize challenge page text as audio.
     """
     if html is None:
         html = fetch_html(url)
+
+    # Early captcha check — reject challenge pages before extraction
+    if is_captcha_page(html):
+        raise CaptchaError(
+            "A captcha/challenge page was detected. "
+            "Open the URL in your browser to solve it, then retry — "
+            "or paste the page HTML source manually."
+        )
 
     title = extract_chapter_title(html)
     next_url = detect_next_chapter_url(html, url)
     novel_info = detect_novel_info(html, url)
 
+    # Try all strategies, keep the best result
+    candidates = []
+
     text = extract_with_known_selectors(html)
-    if not text:
-        text = extract_with_trafilatura(html)
-    if not text or len(text) < 200:
-        text = extract_with_bs4_heuristic(html)
+    if text and len(text) > 200:
+        candidates.append(text)
 
-    text = clean_text(text or "")
+    text = extract_with_trafilatura(html)
+    if text and len(text) > 200:
+        candidates.append(text)
 
-    if len(text) < 100:
-        # Only now check for captcha — extraction already failed
-        if is_captcha_page(html):
-            raise CaptchaError(
-                "Could not extract chapter text and a captcha/challenge page was detected. "
-                "Open the URL in your browser to solve it, then retry."
-            )
+    text = extract_with_bs4_heuristic(html)
+    if text and len(text) > 200:
+        candidates.append(text)
+
+    # Pick the longest candidate
+    text = max(candidates, key=len) if candidates else ""
+
+    text = clean_text(text)
+
+    if len(text) < 200:
         raise ValueError(
             "Could not find substantial chapter text on this page. "
             f"Tried all extraction strategies on: {url}"

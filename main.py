@@ -22,15 +22,17 @@ from auth import (
     is_authenticated,
     make_auth_cookie,
 )
+from browser import manager as browser_manager
 from database import SessionLocal, get_db, init_db
 from models import Chapter, Episode, Job, Novel
-from worker import enqueue_job, shutdown
+from worker import enqueue_job, enqueue_job_with_html, shutdown
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs("output", exist_ok=True)
     init_db()
+    browser_manager.start()
     db = SessionLocal()
     try:
         stuck = db.query(Job).filter(
@@ -192,6 +194,13 @@ class SubmitRequest(BaseModel):
     rate: str = DEFAULT_RATE
 
 
+class SubmitManualRequest(BaseModel):
+    url: str
+    html: str
+    voice: str = DEFAULT_VOICE
+    rate: str = DEFAULT_RATE
+
+
 @app.post("/api/chapters")
 async def submit_chapter(req: SubmitRequest, request: Request):
     _api_auth(request)
@@ -201,6 +210,21 @@ async def submit_chapter(req: SubmitRequest, request: Request):
     if req.voice not in VOICES:
         raise HTTPException(status_code=400, detail="Invalid voice.")
     job_id = enqueue_job(url, req.voice, req.rate)
+    return {"job_id": job_id}
+
+
+@app.post("/api/chapters/manual")
+async def submit_chapter_manual(req: SubmitManualRequest, request: Request):
+    _api_auth(request)
+    url = req.url.strip()
+    html = req.html.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required.")
+    if not html:
+        raise HTTPException(status_code=400, detail="HTML content is required.")
+    if req.voice not in VOICES:
+        raise HTTPException(status_code=400, detail="Invalid voice.")
+    job_id = enqueue_job_with_html(url, html, req.voice, req.rate)
     return {"job_id": job_id}
 
 

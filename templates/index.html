@@ -77,13 +77,19 @@
       <div class="captcha-text">
         <strong>Human verification needed</strong>
         <p>This site is blocking automated access. Open the chapter URL in your browser,
-           solve any challenge that appears, then click <strong>Retry</strong>.</p>
+           copy the page source (right-click → View Page Source → copy all), then paste it below.</p>
       </div>
       <div class="captcha-actions">
         <a id="captcha-open-link" href="#" target="_blank" class="btn btn-secondary">
           Open in Browser
         </a>
         <button id="btn-retry" class="btn btn-primary">Retry</button>
+      </div>
+      <div class="paste-html-section">
+        <label for="paste-html-input" class="paste-label">Or paste the page HTML source:</label>
+        <textarea id="paste-html-input" class="input paste-textarea" 
+                  placeholder="Paste the HTML source code here..." rows="6"></textarea>
+        <button id="btn-submit-paste" class="btn btn-primary" disabled>Submit HTML</button>
       </div>
     </div>
     <div id="error-block" class="error-block" style="display:none">

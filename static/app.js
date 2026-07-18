@@ -119,6 +119,10 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   const toggleAutoDownload  = document.getElementById('toggle-auto-download');
   const toggleAutoPlay      = document.getElementById('toggle-auto-play');
 
+  // Paste HTML elements
+  const pasteHtmlInput  = document.getElementById('paste-html-input');
+  const btnSubmitPaste  = document.getElementById('btn-submit-paste');
+
   function initToggle(toggleEl, key, defaultVal) {
     const stored = localStorage.getItem(key);
     const val = stored !== null ? stored === 'true' : defaultVal;
@@ -403,6 +407,48 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
 
   btnRetry.addEventListener('click', () => retryJob(currentJobId));
   btnRetryErr.addEventListener('click', () => retryJob(currentJobId));
+
+  // Paste HTML functionality
+  pasteHtmlInput.addEventListener('input', () => {
+    btnSubmitPaste.disabled = !pasteHtmlInput.value.trim();
+  });
+
+  btnSubmitPaste.addEventListener('click', async () => {
+    const html = pasteHtmlInput.value.trim();
+    if (!html || !currentJobData?.url) return;
+
+    btnSubmitPaste.disabled = true;
+    btnSubmitPaste.textContent = 'Submitting…';
+    jobDone = false;
+
+    const resp = await fetch('/api/chapters/manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        url: currentJobData.url, 
+        html, 
+        voice: voiceSelect.value, 
+        rate: rateValue() 
+      }),
+    });
+
+    if (!resp.ok) {
+      const d = await resp.json();
+      showStatus('error', { error: d.detail || 'Submission failed.' });
+      btnSubmitPaste.disabled = false;
+      btnSubmitPaste.textContent = 'Submit HTML';
+      return;
+    }
+
+    const { job_id } = await resp.json();
+    currentJobId = job_id;
+    saveActiveJob(job_id);
+    showStatus('queued', {});
+    pasteHtmlInput.value = '';
+    btnSubmitPaste.textContent = 'Submit HTML';
+    clearInterval(pollingInterval);
+    pollingInterval = setInterval(() => pollJob(job_id), 1500);
+  });
 
   btnQueueNext.addEventListener('click', async () => {
     if (!currentJobData?.chapter) return;

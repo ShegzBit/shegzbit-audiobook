@@ -13,8 +13,10 @@ from datetime import datetime
 from threading import Lock
 from typing import Optional
 
-import requests
+from curl_cffi import requests as cffi_requests
+from curl_cffi.requests.exceptions import HTTPError, RequestException
 
+from browser import manager as browser_manager
 from database import SessionLocal
 from extractor import CaptchaError, extract_chapter, fetch_html, is_captcha_page
 from models import Chapter, Episode, Job, Novel
@@ -87,7 +89,7 @@ def process_job(job_id: str):
 
         try:
             html = fetch_html(job.url)
-        except requests.HTTPError as e:
+        except HTTPError as e:
             code = e.response.status_code if e.response is not None else 0
             if code in (403, 429):
                 _set_status(job_id, "captcha_blocked",
@@ -95,12 +97,92 @@ def process_job(job_id: str):
                 return
             _set_status(job_id, "error", error_msg=f"HTTP error {code}: {e}")
             return
-        except requests.RequestException as e:
+        except RequestException as e:
             _set_status(job_id, "error", error_msg=f"Network error: {e}")
             return
 
         # Extract (captcha detection is deferred inside extract_chapter — we try
         # to pull text first and only raise CaptchaError if extraction fails)
+        _set_status(job_id, "extracting")
+        try:
+            chapter = extract_chapter(job.url, html)
+        except CaptchaError as e:
+            _set_status(job_id, "captcha_blocked", error_msg=str(e))
+            return
+        except ValueError as e:
+            _set_status(job_id, "error", error_msg=str(e))
+            return
+
+        # Synthesize
+        _set_status(job_id, "synthesizing")
+
+        def _on_synthesis_progress(current: int, total: int):
+            pct = int(current / total * 100)
+            _set_status(job_id, "synthesizing",
+                        progress_pct=pct,
+                        progress_msg=f"Chunk {current} of {total}")
+
+        audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
+                                progress_callback=_on_synthesis_progress)
+
+        # Save chapter record and update job
+        db2 = SessionLocal()
+        try:
+            job2 = db2.query(Job).filter(Job.id == job_id).first()
+
+            novel = _find_or_create_novel(db2, chapter.novel_title, chapter.novel_index_url)
+
+            ch = Chapter(
+                url_hash=str(uuid.uuid4()),
+                url=job2.url,
+                voice=job2.voice,
+                rate=job2.rate,
+                title=chapter.title,
+                word_count=chapter.word_count,
+                audio_path=str(audio_path),
+                next_chapter_url=chapter.next_chapter_url,
+                novel_id=novel.id if novel else None,
+            )
+            db2.add(ch)
+            db2.flush()
+
+            if novel:
+                ep = db2.query(Episode).filter(
+                    Episode.novel_id == novel.id,
+                    Episode.chapter_url == job2.url,
+                ).first()
+                if not ep:
+                    ep = Episode(
+                        novel_id=novel.id,
+                        chapter_id=ch.id,
+                        chapter_url=job2.url,
+                    )
+                    db2.add(ep)
+                elif not ep.chapter_id:
+                    ep.chapter_id = ch.id
+
+            job2.status = "done"
+            job2.chapter_id = ch.id
+            job2.updated_at = datetime.utcnow()
+            db2.commit()
+        finally:
+            db2.close()
+
+    except Exception as e:
+        logger.exception(f"Unhandled error in job {job_id}: {e}")
+        _set_status(job_id, "error", error_msg=f"Unexpected error: {e}")
+    finally:
+        db.close()
+
+
+def process_job_from_html(job_id: str, html: str):
+    db = SessionLocal()
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return
+
+        # Extract
         _set_status(job_id, "extracting")
         try:
             chapter = extract_chapter(job.url, html)
@@ -187,5 +269,20 @@ def enqueue_job(url: str, voice: str, rate: str) -> str:
     return job_id
 
 
+def enqueue_job_with_html(url: str, html: str, voice: str, rate: str) -> str:
+    db = SessionLocal()
+    try:
+        job_id = str(uuid.uuid4())
+        job = Job(id=job_id, url=url, voice=voice, rate=rate, status="queued")
+        db.add(job)
+        db.commit()
+    finally:
+        db.close()
+
+    executor.submit(process_job_from_html, job_id, html)
+    return job_id
+
+
 def shutdown():
     executor.shutdown(wait=False)
+    browser_manager.shutdown()
