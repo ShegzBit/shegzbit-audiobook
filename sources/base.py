@@ -21,6 +21,7 @@ class ChapterText:
     next_chapter_url: Optional[str] = None
     novel_title: Optional[str] = None
     novel_index_url: Optional[str] = None
+    source_name: Optional[str] = None
 
 
 class NovelSource(ABC):
@@ -70,10 +71,25 @@ class NovelSource(ABC):
         """
 
     def get_next_chapter_url(self, html: str, current_url: str) -> Optional[str]:
-        """Find the URL of the next chapter.
+        """Find the URL of the next chapter by parsing the HTML.
 
         Override for site-specific next-chapter detection.
         Default: look for links with "next chapter" text, then try URL incrementing.
+        """
+
+    def generate_next_url(self, current_url: str) -> Optional[str]:
+        """Generate the next chapter URL from the current URL alone (no HTML).
+
+        Override for site-specific URL pattern generation. This is used as a
+        fallback when get_next_chapter_url() returns None (e.g. the HTML didn't
+        contain a next link, or the page was fetched without full rendering).
+
+        Examples:
+            - URL incrementing: /chapter_5.html -> /chapter_6.html
+            - Path-based: /novel/book/5 -> /novel/book/6
+            - Query-based: ?ch=5 -> ?ch=6
+
+        Default: tries common URL number incrementing patterns.
         """
 
     def get_novel_info(self, html: str, chapter_url: str) -> dict:
@@ -100,6 +116,8 @@ class NovelSource(ABC):
         Override to add site-specific noise removal.
         Default: standard noise (script, style, nav, footer, etc.).
         """
+        from scraping.normalizer import DEFAULT_NOISE_SELECTORS
+        return DEFAULT_NOISE_SELECTORS
 
     def get_trailing_cutoffs(self) -> list[str]:
         """Regex patterns for lines that mark end of chapter content.

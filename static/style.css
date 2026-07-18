@@ -256,6 +256,7 @@ label {
 }
 .tag-link { text-decoration: none; cursor: pointer; }
 .tag-link:hover { color: var(--accent2); border-color: var(--accent); }
+.tag-source { opacity: .55; font-size: .72rem; font-style: italic; }
 
 /* ---- Persistent player ---- */
 .persistent-player {

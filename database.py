@@ -17,11 +17,17 @@ def init_db():
 
     # Migrate missing columns (for existing databases)
     insp = inspect(engine)
-    columns = [c["name"] for c in insp.get_columns("jobs")]
-    if "progress_pct" not in columns:
+
+    jobs_columns = [c["name"] for c in insp.get_columns("jobs")]
+    if "progress_pct" not in jobs_columns:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE jobs ADD COLUMN progress_pct INTEGER"))
             conn.execute(text("ALTER TABLE jobs ADD COLUMN progress_msg VARCHAR(200)"))
+
+    chapters_columns = [c["name"] for c in insp.get_columns("chapters")]
+    if "source_name" not in chapters_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE chapters ADD COLUMN source_name VARCHAR(50)"))
 
 
 def get_db():

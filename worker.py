@@ -126,6 +126,7 @@ def _save_chapter_record(job_id: str, chapter, db=None):
             audio_path=chapter.audio_path if hasattr(chapter, "audio_path") else "",
             next_chapter_url=chapter.next_chapter_url,
             novel_id=novel.id if novel else None,
+            source_name=chapter.source_name,
         )
         db.add(ch)
         db.flush()
@@ -222,6 +223,7 @@ def process_job(job_id: str):
                 audio_path=str(audio_path),
                 next_chapter_url=chapter.next_chapter_url,
                 novel_id=novel.id if novel else None,
+                source_name=chapter.source_name,
             )
             db2.add(ch)
             db2.flush()
@@ -302,6 +304,7 @@ def process_job_from_html(job_id: str, html: str):
                 audio_path=str(audio_path),
                 next_chapter_url=chapter.next_chapter_url,
                 novel_id=novel.id if novel else None,
+                source_name=chapter.source_name,
             )
             db2.add(ch)
             db2.flush()

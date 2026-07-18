@@ -121,7 +121,7 @@ def get_chapter_title(self, html: str) -> Optional[str]:
 
 ### `get_next_chapter_url(html: str, current_url: str) -> Optional[str]`
 
-Find the URL of the next chapter.
+Find the URL of the next chapter by parsing the HTML.
 
 **Default:** Look for links with "next chapter" text, then try URL number incrementing (`chapter_5.html` -> `chapter_6.html`).
 
@@ -131,6 +131,36 @@ def get_next_chapter_url(self, html: str, current_url: str) -> Optional[str]:
     a = soup.select_one("a.next-btn")
     return urljoin(current_url, a["href"]) if a else None
 ```
+
+### `generate_next_url(current_url: str) -> Optional[str]`
+
+Generate the next chapter URL from the current URL alone (no HTML needed). Used as a **fallback** when `get_next_chapter_url()` returns `None` — for example, when the HTML didn't contain a next link, or the page was fetched without full rendering.
+
+**Default:** Tries common URL incrementing patterns:
+- `/chapter_5.html` -> `/chapter_6.html`
+- `/novel/book-12` -> `/novel/book-13`
+- `/read/42` -> `/read/43`
+- `?ch=5` -> `?ch=6`
+
+You can also use the `increment_url` utility for generic incrementing:
+
+```python
+from scraping.parser import increment_url
+
+def generate_next_url(self, current_url: str) -> Optional[str]:
+    # Royal Road: /fiction/12345/chapter/67890/slug -> increment chapter ID
+    m = re.search(r"/chapter/(\d+)/", current_url)
+    if m:
+        old_id = int(m.group(1))
+        new_id = old_id + 1
+        next_url = current_url.replace(f"/chapter/{old_id}/", f"/chapter/{new_id}/")
+        if next_url != current_url:
+            return next_url
+    # Fallback to generic incrementing
+    return increment_url(current_url)
+```
+
+**Pipeline behavior:** The extractor calls `get_next_chapter_url(html, url)` first. If that returns `None`, it calls `generate_next_url(url)` as fallback. This ensures the auto-queue feature works even when the HTML-based detection fails.
 
 ### `get_novel_info(html: str, chapter_url: str) -> dict`
 
@@ -201,6 +231,7 @@ Import these from the `scraping` and `sources` packages:
 | `from scraping.normalizer import normalizer` | `normalizer.word_count(text)` — accurate word count |
 | `from scraping.parser import parser` | `parser.extract_with_trafilatura(html)` — general article extraction |
 | `from scraping.parser import parser` | `parser.extract_with_bs4_heuristic(html)` — largest text block |
+| `from scraping.parser import increment_url` | `increment_url(url)` — increment a number in the URL path/query |
 | `from scraping.detector import detector` | `detector.is_captcha_page(html)` — check for challenge pages |
 | `from bs4 import BeautifulSoup` | HTML parsing (already a dependency) |
 

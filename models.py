@@ -37,6 +37,7 @@ class Chapter(Base):
     audio_path = Column(Text, nullable=False)
     next_chapter_url = Column(Text, nullable=True)
     novel_id = Column(Integer, ForeignKey("novels.id"), nullable=True)
+    source_name = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     novel = relationship("Novel", back_populates="chapters")

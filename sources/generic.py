@@ -14,7 +14,7 @@ import logging
 from typing import Optional
 
 from sources.base import ChapterText, NovelSource
-from scraping.parser import parser, DEFAULT_CONTENT_SELECTORS
+from scraping.parser import parser, increment_url, DEFAULT_CONTENT_SELECTORS
 from scraping.normalizer import normalizer, DEFAULT_NOISE_SELECTORS
 
 logger = logging.getLogger(__name__)
@@ -42,6 +42,9 @@ class GenericSource(NovelSource):
 
     def get_next_chapter_url(self, html: str, current_url: str) -> Optional[str]:
         return parser.detect_next_chapter_url(html, current_url)
+
+    def generate_next_url(self, current_url: str) -> Optional[str]:
+        return increment_url(current_url)
 
     def get_novel_info(self, html: str, chapter_url: str) -> dict:
         return parser.detect_novel_info(html, chapter_url)

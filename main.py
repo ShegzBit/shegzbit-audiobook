@@ -97,6 +97,7 @@ def _chapter_dict(ch: Chapter) -> dict:
         "audio_url": f"/output/{os.path.basename(ch.audio_path)}",
         "next_chapter_url": ch.next_chapter_url,
         "novel_id": ch.novel_id,
+        "source": ch.source_name,
     }
 
 
@@ -273,6 +274,25 @@ async def retry_job(job_id: str, request: Request, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail="Job is not in a retryable state.")
     new_job_id = enqueue_job(job.url, job.voice, job.rate)
     return {"job_id": new_job_id}
+
+
+# ---------------------------------------------------------------------------
+# API — Sources
+# ---------------------------------------------------------------------------
+
+@app.get("/api/sources")
+async def list_sources(request: Request):
+    _api_auth(request)
+    from sources import registry
+    return [
+        {
+            "name": s.name,
+            "domain_patterns": s.domain_patterns,
+            "requires_browser": s.requires_browser,
+            "language": s.language,
+        }
+        for s in registry.all_sources()
+    ]
 
 
 # ---------------------------------------------------------------------------

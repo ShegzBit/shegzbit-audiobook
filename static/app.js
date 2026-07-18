@@ -114,6 +114,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   const progressFill  = document.getElementById('progress-bar-fill');
   const progressPct   = document.getElementById('progress-pct');
   const progressMsg   = document.getElementById('progress-msg');
+  const playerSource  = document.getElementById('player-source');
 
   const toggleAutoQueue     = document.getElementById('toggle-auto-queue');
   const toggleAutoDownload  = document.getElementById('toggle-auto-download');
@@ -234,6 +235,13 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     playerDur.textContent     = estDuration(chapter.word_count);
     playerDl.href             = chapter.audio_url;
     playerDl.download         = chapter.title.replace(/[^a-z0-9 ]/gi, '_') + '.mp3';
+
+    if (chapter.source) {
+      playerSource.textContent = chapter.source;
+      playerSource.style.display = 'inline';
+    } else {
+      playerSource.style.display = 'none';
+    }
 
     if (chapter.next_chapter_url) {
       if (toggleAutoQueue.checked) {

@@ -186,4 +186,49 @@ class HTMLParser:
         return {"title": None, "index_url": None}
 
 
+def increment_url(url: str) -> Optional[str]:
+    """Try to generate the next URL by incrementing a number in the path.
+
+    Matches patterns like:
+        /chapter_5.html  -> /chapter_6.html
+        /novel/book-12   -> /novel/book-13
+        /read/42         -> /read/43
+        ?ch=5            -> ?ch=6
+
+    Returns None if no incrementable pattern is found.
+    """
+    # Path-based: _5.html, -12, /42
+    m = re.search(r"(_|-)(\d+)(\.html?)?(\?.*)?$", url)
+    if m:
+        prefix = m.group(1)
+        num = int(m.group(2))
+        suffix = m.group(3) or ""
+        query = m.group(4) or ""
+        next_url = re.sub(
+            r"(_|-)(\d+)(\.html?)?(\?.*)?$",
+            f"{prefix}{num + 1}{suffix}{query}",
+            url,
+        )
+        if next_url != url:
+            return next_url
+
+    # Path segment: /chapter/5/ -> /chapter/6/
+    m = re.search(r"/(\d+)/?$", url)
+    if m:
+        num = int(m.group(1))
+        next_url = url[:m.start(1)] + str(num + 1) + url[m.end(1):]
+        if next_url != url:
+            return next_url
+
+    # Query parameter: ?ch=5&... -> ?ch=6&...
+    m = re.search(r"([?&](?:ch|chapter|id|p)=(\d+))", url)
+    if m:
+        num = int(m.group(2))
+        next_url = url[:m.start(1)] + m.group(1).replace(f"={num}", f"={num + 1}") + url[m.end(1):]
+        if next_url != url:
+            return next_url
+
+    return None
+
+
 parser = HTMLParser()

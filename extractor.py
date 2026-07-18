@@ -90,7 +90,17 @@ def extract_chapter(url: str, html: Optional[str] = None) -> ChapterText:
             source_name=source.name,
         ) from e
 
-    # 5. Validate result
+    # 5. Fallback: generate next URL from pattern if HTML-based detection failed
+    if not chapter.next_chapter_url:
+        generated = source.generate_next_url(url)
+        if generated:
+            chapter.next_chapter_url = generated
+            logger.info("Generated next URL from pattern: %s", generated)
+
+    # 6. Attach source name for display
+    chapter.source_name = source.name
+
+    # 7. Validate result
     if not chapter.text or len(chapter.text) < 200:
         raise EmptyExtractionError(
             "Could not find substantial chapter text on this page. "

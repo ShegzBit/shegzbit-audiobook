@@ -7,12 +7,13 @@ title extraction, and next-chapter detection.
 
 import re
 from typing import Optional
+from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
 
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 
 from sources.base import ChapterText, NovelSource
 from scraping.normalizer import normalizer
+from scraping.parser import increment_url
 
 
 class WuxiaWorldSource(NovelSource):
@@ -57,6 +58,10 @@ class WuxiaWorldSource(NovelSource):
             if "next" in text and len(text) < 30:
                 return urljoin(current_url, a["href"])
         return None
+
+    def generate_next_url(self, current_url: str) -> Optional[str]:
+        # WuxiaWorld uses /novel/book/chapter-N or /novel/book/chapter_N
+        return increment_url(current_url)
 
     def get_novel_info(self, html: str, chapter_url: str) -> dict:
         soup = BeautifulSoup(html, "html.parser")
