@@ -27,7 +27,7 @@ from synthesizer import synthesize
 
 logger = logging.getLogger(__name__)
 
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=4)
 
 # Per-domain rate limiting: ensure min 2s between requests to same domain
 _domain_last_request: dict[str, float] = defaultdict(float)
