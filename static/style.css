@@ -361,6 +361,24 @@ label {
 }
 .login-input:focus { border-color: var(--accent); }
 
+/* ---- Extension integration ---- */
+.ext-row { align-items: center; gap: .75rem; flex-wrap: wrap; }
+.ext-status { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--muted); }
+.ext-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.ext-dot-on { background: var(--success); }
+.ext-dot-off { background: var(--danger); }
+.ext-dot-scraping { background: var(--warn); animation: pulse 1s infinite; }
+.ext-status-text { white-space: nowrap; }
+.ext-config { padding: 1rem 0 .5rem; display: flex; flex-direction: column; gap: .75rem; }
+.session-counter { font-size: .82rem; color: var(--muted); padding-top: .25rem; }
+.btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); padding: .35rem .6rem; border-radius: 8px; cursor: pointer; font-size: .9rem; }
+.btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
 /* ---- Misc ---- */
 .muted { color: var(--muted); }
 

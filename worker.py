@@ -338,6 +338,78 @@ def process_job_from_html(job_id: str, html: str):
         db.close()
 
 
+def process_pre_extracted_job(job_id: str, chapter):
+    """Synthesize and save for an already-extracted chapter.
+
+    Used by POST /api/jobs where extraction runs synchronously in the endpoint
+    and only synthesis is kicked off as a background task.
+    """
+    db = SessionLocal()
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            return
+
+        _set_status(job_id, "synthesizing")
+
+        def _on_synthesis_progress(current: int, total: int):
+            pct = int(current / total * 100)
+            _set_status(job_id, "synthesizing",
+                        progress_pct=pct,
+                        progress_msg=f"Chunk {current} of {total}")
+
+        audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
+                                progress_callback=_on_synthesis_progress)
+
+        db2 = SessionLocal()
+        try:
+            job2 = db2.query(Job).filter(Job.id == job_id).first()
+            novel = _find_or_create_novel(db2, chapter.novel_title, chapter.novel_index_url)
+
+            ch = Chapter(
+                url_hash=str(uuid.uuid4()),
+                url=job2.url,
+                voice=job2.voice,
+                rate=job2.rate,
+                title=chapter.title,
+                word_count=chapter.word_count,
+                audio_path=str(audio_path),
+                next_chapter_url=chapter.next_chapter_url,
+                novel_id=novel.id if novel else None,
+                source_name=chapter.source_name,
+            )
+            db2.add(ch)
+            db2.flush()
+
+            if novel:
+                ep = db2.query(Episode).filter(
+                    Episode.novel_id == novel.id,
+                    Episode.chapter_url == job2.url,
+                ).first()
+                if not ep:
+                    ep = Episode(
+                        novel_id=novel.id,
+                        chapter_id=ch.id,
+                        chapter_url=job2.url,
+                    )
+                    db2.add(ep)
+                elif not ep.chapter_id:
+                    ep.chapter_id = ch.id
+
+            job2.status = "done"
+            job2.chapter_id = ch.id
+            job2.updated_at = datetime.utcnow()
+            db2.commit()
+        finally:
+            db2.close()
+
+    except Exception as e:
+        logger.exception(f"Unhandled error in pre-extracted job {job_id}: {e}")
+        _set_status(job_id, "error", error_msg=f"Unexpected error: {e}")
+    finally:
+        db.close()
+
+
 def enqueue_job(url: str, voice: str, rate: str) -> str:
     db = SessionLocal()
     try:

@@ -472,4 +472,293 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
       await submitChapter();
     }
   });
+
+  // -----------------------------------------------------------------------
+  // Extension integration
+  // -----------------------------------------------------------------------
+  const EXT_ID_KEY        = 'audiobook-juice-ext-id';
+  const DELAY_KEY         = 'ext-auto-queue-delay';
+  const CAP_KEY           = 'ext-session-cap';
+
+  const extConfigToggle   = document.getElementById('ext-config-toggle');
+  const extConfigPanel    = document.getElementById('ext-config');
+  const extIdInput        = document.getElementById('ext-id-input');
+  const delayInput        = document.getElementById('delay-input');
+  const capInput          = document.getElementById('cap-input');
+  const btnScrape         = document.getElementById('btn-scrape');
+  const extDot            = document.getElementById('ext-dot');
+  const extStatusText     = document.getElementById('ext-status-text');
+  const sessionCounter    = document.getElementById('session-counter');
+
+  // Load saved config
+  extIdInput.value = localStorage.getItem(EXT_ID_KEY) || '';
+  const savedDelay = localStorage.getItem(DELAY_KEY);
+  if (savedDelay) delayInput.value = savedDelay;
+  const savedCap = localStorage.getItem(CAP_KEY);
+  if (savedCap) capInput.value = savedCap;
+
+  extIdInput.addEventListener('change', () => localStorage.setItem(EXT_ID_KEY, extIdInput.value.trim()));
+  delayInput.addEventListener('change', () => localStorage.setItem(DELAY_KEY, delayInput.value));
+  capInput.addEventListener('change', () => localStorage.setItem(CAP_KEY, capInput.value));
+
+  extConfigToggle.addEventListener('click', () => {
+    const visible = extConfigPanel.style.display !== 'none';
+    extConfigPanel.style.display = visible ? 'none' : 'flex';
+  });
+
+  let sessionChapterCount = 0;
+
+  function jitteredDelayMs(baseMinutes) {
+    const baseMs = baseMinutes * 60 * 1000;
+    const jitterFactor = 0.7 + Math.random() * 0.6;
+    return Math.round(baseMs * jitterFactor);
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function getBaseDelay() {
+    return Math.max(0.5, parseFloat(delayInput.value) || 2);
+  }
+
+  function getSessionCap() {
+    return Math.max(1, parseInt(capInput.value, 10) || 20);
+  }
+
+  // Extension availability check
+  function checkExtension() {
+    const isChrome = typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.connect === 'function';
+    if (isChrome) {
+      extDot.className = 'ext-dot ext-dot-on';
+      extStatusText.textContent = extIdInput.value.trim()
+        ? 'Extension ready' : 'Enter extension ID \u2699';
+    } else {
+      extDot.className = 'ext-dot ext-dot-off';
+      extStatusText.textContent = 'Use Chrome for extension support';
+    }
+  }
+  checkExtension();
+
+  function setExtStatus(state, msg) {
+    extStatusText.textContent = msg;
+    if (state === 'ok')       extDot.className = 'ext-dot ext-dot-on';
+    else if (state === 'off') extDot.className = 'ext-dot ext-dot-off';
+    else if (state === 'busy') extDot.className = 'ext-dot ext-dot-scraping';
+  }
+
+  function updateSessionCounter(extra) {
+    const cap = getSessionCap();
+    let text = `${sessionChapterCount} / ${cap} chapters`;
+    if (extra) text += ' — ' + extra;
+    sessionCounter.textContent = text;
+    sessionCounter.style.display = 'block';
+  }
+
+  function scrapeUrl(url, { closeAfterScrape = true } = {}) {
+    return new Promise((resolve, reject) => {
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.connect) {
+        reject(new Error('Browser extension not detected. Install the Audiobook Juice extension and reload this page.'));
+        return;
+      }
+      const extId = extIdInput.value.trim();
+      if (!extId) {
+        reject(new Error('Extension ID not set. Click ⚙ and enter the 32-character ID from chrome://extensions.'));
+        return;
+      }
+      let port;
+      try {
+        port = chrome.runtime.connect(extId);
+      } catch (e) {
+        reject(new Error('Failed to connect to extension: ' + e.message));
+        return;
+      }
+      const timeout = setTimeout(() => {
+        try { port.disconnect(); } catch (_) {}
+        reject(new Error('Extension timed out after 30s. Is the extension enabled and on a chapter page?'));
+      }, 30000);
+
+      port.onMessage.addListener((msg) => {
+        if (msg.type === 'SCRAPE_RESULT') {
+          clearTimeout(timeout);
+          try { port.disconnect(); } catch (_) {}
+          resolve(msg);
+        } else if (msg.type === 'SCRAPE_ERROR') {
+          clearTimeout(timeout);
+          try { port.disconnect(); } catch (_) {}
+          reject(new Error(msg.error || 'Extension scrape failed.'));
+        }
+      });
+
+      port.onDisconnect.addListener(() => {
+        clearTimeout(timeout);
+        const err = chrome.runtime?.lastError;
+        if (err) reject(new Error('Extension disconnected: ' + err.message));
+      });
+
+      port.postMessage({ type: 'SCRAPE_URL', url, closeAfterScrape });
+    });
+  }
+
+  function pollUntilDone(jobId) {
+    return new Promise((resolve, reject) => {
+      const interval = setInterval(async () => {
+        try {
+          const resp = await fetch(`/api/jobs/${jobId}`);
+          if (!resp.ok) return;
+          const data = await resp.json();
+          showStatus(data.status, data);
+          if (data.status === 'done') {
+            clearInterval(interval);
+            resolve(data);
+          } else if (data.status === 'error') {
+            clearInterval(interval);
+            reject(new Error(data.error || 'Job failed.'));
+          }
+        } catch (_) {}
+      }, 2000);
+    });
+  }
+
+  function showExtensionPlayer(chapter, episode) {
+    playerCard.style.display  = 'block';
+    playerTitle.textContent   = chapter.title;
+    playerWords.textContent   = `${chapter.word_count.toLocaleString()} words`;
+    playerDur.textContent     = estDuration(chapter.word_count);
+    playerDl.href             = chapter.audio_url;
+    playerDl.download         = chapter.title.replace(/[^a-z0-9 ]/gi, '_') + '.mp3';
+    nextRow.style.display     = 'none';
+
+    if (chapter.source) {
+      playerSource.textContent = chapter.source;
+      playerSource.style.display = 'inline';
+    } else {
+      playerSource.style.display = 'none';
+    }
+
+    _player.loadEpisode({
+      episodeId:  episode?.id || null,
+      audioUrl:   chapter.audio_url,
+      startPos:   episode?.listened_position_seconds || 0,
+      title:      chapter.title,
+      wordCount:  chapter.word_count,
+      novelId:    chapter.novel_id,
+      autoPlay:   toggleAutoPlay.checked,
+    });
+
+    if (!toggleAutoPlay.checked) playDing();
+  }
+
+  function triggerDownload(chapter) {
+    const a = document.createElement('a');
+    a.href = chapter.audio_url;
+    a.download = (chapter.title || 'chapter').replace(/[^a-z0-9 ]/gi, '_') + '.mp3';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  async function processChapter(url, autoQueue) {
+    sessionChapterCount++;
+    const cap = getSessionCap();
+    updateSessionCounter('Scraping…');
+    setExtStatus('busy', 'Scraping…');
+    btnScrape.disabled = true;
+    jobDone = false;
+    playerCard.style.display = 'none';
+    jobStatus.style.display  = 'none';
+    clearInterval(pollingInterval);
+
+    // 1 — Scrape via extension
+    let result;
+    try {
+      result = await scrapeUrl(url, { closeAfterScrape: true });
+    } catch (e) {
+      setExtStatus('off', e.message);
+      updateSessionCounter('Error');
+      btnScrape.disabled = false;
+      showStatus('error', { error: e.message });
+      return;
+    }
+
+    // 2 — POST to /api/jobs
+    updateSessionCounter('Submitting…');
+    setExtStatus('busy', 'Extracting…');
+    let jobData;
+    try {
+      const resp = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.url, html: result.html, title: result.title }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json();
+        const msg = err.detail || 'Submission failed.';
+        setExtStatus('off', msg);
+        updateSessionCounter('Error');
+        btnScrape.disabled = false;
+        showStatus('error', { error: msg });
+        return;
+      }
+      jobData = await resp.json();
+    } catch (e) {
+      setExtStatus('off', 'Network error');
+      updateSessionCounter('Error');
+      btnScrape.disabled = false;
+      showStatus('error', { error: 'Network error submitting job.' });
+      return;
+    }
+
+    currentJobId = jobData.job_id;
+    saveActiveJob(jobData.job_id);
+    showStatus('queued', {});
+
+    // 3 — Poll until done
+    updateSessionCounter('Synthesizing…');
+    setExtStatus('busy', 'Synthesizing…');
+    let pollData;
+    try {
+      pollData = await pollUntilDone(jobData.job_id);
+    } catch (e) {
+      setExtStatus('off', e.message);
+      updateSessionCounter('Error');
+      btnScrape.disabled = false;
+      showStatus('error', { error: e.message });
+      return;
+    }
+
+    jobDone = true;
+    setExtStatus('ok', 'Done');
+    updateSessionCounter('Done');
+    btnScrape.disabled = false;
+    showExtensionPlayer(pollData.chapter, pollData.episode);
+
+    if (toggleAutoDownload.checked && pollData.chapter?.audio_url) {
+      triggerDownload(pollData.chapter);
+    }
+
+    // 4 — Auto-queue next chapter
+    const nextUrl = jobData.next_chapter_url || pollData.chapter?.next_chapter_url;
+    console.log('[ext] auto-queue check:', { autoQueue, nextUrl, sessionChapterCount, cap });
+    if (autoQueue && nextUrl) {
+      if (sessionChapterCount >= cap) {
+        setExtStatus('ok', `Cap reached (${cap} chapters)`);
+        updateSessionCounter('Cap reached — done');
+        return;
+      }
+      const delayMs = jitteredDelayMs(getBaseDelay());
+      const mins = Math.round(delayMs / 60000);
+      updateSessionCounter(`Waiting ~${mins}m for next chapter…`);
+      setExtStatus('busy', `Next chapter in ~${mins}m`);
+      await sleep(delayMs);
+      processChapter(nextUrl, true);
+    }
+  }
+
+  btnScrape.addEventListener('click', async () => {
+    const url = urlInput.value.trim();
+    if (!url) { urlInput.focus(); return; }
+    sessionChapterCount = 0;
+    await processChapter(url, toggleAutoQueue.checked);
+  });
 }

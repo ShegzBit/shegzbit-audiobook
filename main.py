@@ -14,6 +14,8 @@ from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+import uuid
+
 from auth import (
     COOKIE_MAX_AGE,
     COOKIE_NAME,
@@ -24,8 +26,16 @@ from auth import (
 )
 from browser import manager as browser_manager
 from database import SessionLocal, get_db, init_db
+from errors import ScrapingError
+from extractor import extract_chapter
 from models import Chapter, Episode, Job, Novel
-from worker import enqueue_job, enqueue_job_with_html, shutdown
+from worker import (
+    enqueue_job,
+    enqueue_job_with_html,
+    executor,
+    process_pre_extracted_job,
+    shutdown,
+)
 
 
 @asynccontextmanager
@@ -227,6 +237,56 @@ async def submit_chapter_manual(req: SubmitManualRequest, request: Request):
         raise HTTPException(status_code=400, detail="Invalid voice.")
     job_id = enqueue_job_with_html(url, html, req.voice, req.rate)
     return {"job_id": job_id}
+
+
+class CreateJobRequest(BaseModel):
+    url: str
+    html: str
+    title: str | None = None
+
+
+@app.post("/api/jobs")
+async def create_job(req: CreateJobRequest, request: Request):
+    """Ingest endpoint for extension-scraped HTML.
+
+    Runs extract_chapter synchronously so next_chapter_url is available
+    immediately, then kicks off synthesis as a background task.
+    """
+    _api_auth(request)
+    url = req.url.strip()
+    html = req.html.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required.")
+    if not html:
+        raise HTTPException(status_code=400, detail="HTML content is required.")
+
+    try:
+        chapter = extract_chapter(url, html)
+    except ScrapingError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to extract chapter: {e}")
+
+    job_id = str(uuid.uuid4())
+    job = Job(
+        id=job_id, url=url,
+        voice=DEFAULT_VOICE, rate=DEFAULT_RATE,
+        status="queued",
+    )
+    db = SessionLocal()
+    try:
+        db.add(job)
+        db.commit()
+    finally:
+        db.close()
+
+    executor.submit(process_pre_extracted_job, job_id, chapter)
+
+    return {
+        "job_id": job_id,
+        "poll_url": f"/api/jobs/{job_id}",
+        "next_chapter_url": chapter.next_chapter_url,
+    }
 
 
 @app.get("/api/jobs/{job_id}")

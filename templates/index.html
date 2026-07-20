@@ -61,6 +61,35 @@
     <button id="btn-submit" class="btn btn-primary">Generate Audio</button>
   </div>
 
+  <div class="btn-row ext-row">
+    <button id="btn-scrape" class="btn btn-secondary">Scrape via Extension</button>
+    <span id="ext-status" class="ext-status">
+      <span id="ext-dot" class="ext-dot ext-dot-off"></span>
+      <span id="ext-status-text" class="ext-status-text">Checking extension…</span>
+    </span>
+    <button id="ext-config-toggle" class="btn btn-sm btn-ghost" title="Extension settings">⚙</button>
+  </div>
+
+  <div id="ext-config" class="ext-config" style="display:none">
+    <div class="field">
+      <label for="ext-id-input">Extension ID</label>
+      <input type="text" id="ext-id-input" class="input"
+             placeholder="32-char hex from chrome://extensions" />
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label for="delay-input">Auto-queue delay (min)</label>
+        <input type="number" id="delay-input" class="input"
+               min="0.5" step="0.5" value="2" />
+      </div>
+      <div class="field">
+        <label for="cap-input">Session chapter cap</label>
+        <input type="number" id="cap-input" class="input"
+               min="1" max="200" value="20" />
+      </div>
+    </div>
+  </div>
+
   <div id="job-status" class="job-status" style="display:none">
     <div class="status-row">
       <div class="spinner" id="status-spinner"></div>
@@ -96,6 +125,7 @@
       <span id="error-msg"></span>
       <button id="btn-retry-error" class="btn btn-sm btn-secondary" style="margin-left:.5rem">Retry</button>
     </div>
+    <div id="session-counter" class="session-counter" style="display:none"></div>
   </div>
 </div>
 
