@@ -22,6 +22,7 @@ class ChapterText:
     novel_title: Optional[str] = None
     novel_index_url: Optional[str] = None
     source_name: Optional[str] = None
+    chapter_number: Optional[int] = None
 
 
 class NovelSource(ABC):

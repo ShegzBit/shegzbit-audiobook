@@ -16,6 +16,7 @@ import logging
 from typing import Optional
 
 from browser import manager as browser_manager
+from chapter_number import extract_chapter_number
 from errors import CaptchaError, EmptyExtractionError, ScrapingError
 from scraping.fetcher import Fetcher
 from scraping.detector import detector
@@ -62,20 +63,18 @@ def extract_chapter(url: str, html: Optional[str] = None) -> ChapterText:
     # 1. Resolve source
     source = registry.resolve(url)
 
-    # 2. Fetch if needed
+    # 2. Fetch if needed; only check for captchas on fetched HTML
     if html is None:
         result = _fetcher.fetch(url, requires_browser=source.requires_browser)
         html = result.html
-
-    # 3. Early challenge detection
-    if detector.is_captcha_page(html):
-        raise CaptchaError(
-            "A captcha/challenge page was detected. "
-            "Open the URL in your browser to solve it, then retry — "
-            "or paste the page HTML source manually.",
-            url=url,
-            source_name=source.name,
-        )
+        if detector.is_captcha_page(html):
+            raise CaptchaError(
+                "A captcha/challenge page was detected. "
+                "Open the URL in your browser to solve it, then retry — "
+                "or paste the page HTML source manually.",
+                url=url,
+                source_name=source.name,
+            )
 
     # 4. Extract via source
     try:
@@ -100,7 +99,11 @@ def extract_chapter(url: str, html: Optional[str] = None) -> ChapterText:
     # 6. Attach source name for display
     chapter.source_name = source.name
 
-    # 7. Validate result
+    # 7. Extract chapter number for systematic filenames
+    if chapter.chapter_number is None:
+        chapter.chapter_number = extract_chapter_number(chapter.title, html, url)
+
+    # 8. Validate result
     if not chapter.text or len(chapter.text) < 200:
         raise EmptyExtractionError(
             "Could not find substantial chapter text on this page. "

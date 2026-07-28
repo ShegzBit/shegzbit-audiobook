@@ -29,6 +29,10 @@ def init_db():
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE chapters ADD COLUMN source_name VARCHAR(50)"))
 
+    if "chapter_number" not in chapters_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE chapters ADD COLUMN chapter_number INTEGER"))
+
 
 def get_db():
     db = SessionLocal()

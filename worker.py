@@ -9,6 +9,7 @@ import logging
 import os
 import time
 import uuid
+import threading
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -34,6 +35,11 @@ _domain_last_request: dict[str, float] = defaultdict(float)
 _domain_lock = Lock()
 DOMAIN_MIN_DELAY = 2.0
 
+# Pre-fetch cache: store next chapter's HTML while synthesizing current chapter
+_prefetch_cache: dict[str, tuple[str, float]] = {}  # url -> (html, timestamp)
+_prefetch_lock = Lock()
+PREFETCH_TTL = 300  # 5 minutes
+
 
 def _domain_of(url: str) -> str:
     from urllib.parse import urlparse
@@ -48,6 +54,31 @@ def _rate_limit_domain(url: str):
         if wait > 0:
             time.sleep(wait)
         _domain_last_request[domain] = time.time()
+
+
+def _prefetch_next_chapter(next_url: str):
+    """Background-fetch the next chapter's HTML and cache it."""
+    if not next_url:
+        return
+    try:
+        _rate_limit_domain(next_url)
+        html = _fetch_with_retry(next_url)
+        with _prefetch_lock:
+            _prefetch_cache[next_url] = (html, time.time())
+        logger.info("Pre-fetched next chapter: %s", next_url)
+    except Exception as e:
+        logger.warning("Pre-fetch failed for %s: %s", next_url, e)
+
+
+def _get_prefetched_html(url: str) -> Optional[str]:
+    """Check cache for pre-fetched HTML. Returns None if not cached or expired."""
+    with _prefetch_lock:
+        entry = _prefetch_cache.pop(url, None)
+        if entry:
+            html, ts = entry
+            if time.time() - ts < PREFETCH_TTL:
+                return html
+    return None
 
 
 def _set_status(job_id: str, status: str, **kwargs):
@@ -127,6 +158,7 @@ def _save_chapter_record(job_id: str, chapter, db=None):
             next_chapter_url=chapter.next_chapter_url,
             novel_id=novel.id if novel else None,
             source_name=chapter.source_name,
+            chapter_number=chapter.chapter_number,
         )
         db.add(ch)
         db.flush()
@@ -151,8 +183,7 @@ def _save_chapter_record(job_id: str, chapter, db=None):
         job.updated_at = datetime.utcnow()
         db.commit()
     finally:
-        if close_db:
-            db.close()
+        db.close()
 
 
 def process_job(job_id: str):
@@ -165,24 +196,29 @@ def process_job(job_id: str):
 
         # Fetch
         _set_status(job_id, "fetching")
-        _rate_limit_domain(job.url)
-
-        try:
-            html = _fetch_with_retry(job.url)
-        except CaptchaError as e:
-            _set_status(job_id, "captcha_blocked", error_msg=str(e))
-            return
-        except HttpError as e:
-            _set_status(job_id, "error",
-                        error_msg=f"HTTP error {e.status_code}: {e}")
-            return
-        except NetworkError as e:
-            _set_status(job_id, "error",
-                        error_msg=f"Network error after retries: {e}")
-            return
+        html = _get_prefetched_html(job.url)
+        if html:
+            logger.info("Using pre-fetched HTML for %s", job.url)
+            _set_status(job_id, "fetching", progress_msg="Using cached page…")
+        else:
+            _rate_limit_domain(job.url)
+            _set_status(job_id, "fetching", progress_msg="Downloading HTML…")
+            try:
+                html = _fetch_with_retry(job.url)
+            except CaptchaError as e:
+                _set_status(job_id, "captcha_blocked", error_msg=str(e))
+                return
+            except HttpError as e:
+                _set_status(job_id, "error",
+                            error_msg=f"HTTP error {e.status_code}: {e}")
+                return
+            except NetworkError as e:
+                _set_status(job_id, "error",
+                            error_msg=f"Network error after retries: {e}")
+                return
 
         # Extract
-        _set_status(job_id, "extracting")
+        _set_status(job_id, "extracting", progress_msg="Parsing chapter text…")
         try:
             chapter = _extract_with_retry(job.url, html)
         except CaptchaError as e:
@@ -196,7 +232,15 @@ def process_job(job_id: str):
             return
 
         # Synthesize
-        _set_status(job_id, "synthesizing")
+        # Pre-fetch next chapter in background while synthesizing
+        if chapter.next_chapter_url:
+            threading.Thread(
+                target=_prefetch_next_chapter,
+                args=(chapter.next_chapter_url,),
+                daemon=True,
+            ).start()
+
+        _set_status(job_id, "synthesizing", progress_pct=0, progress_msg="Starting synthesis…")
 
         def _on_synthesis_progress(current: int, total: int):
             pct = int(current / total * 100)
@@ -205,7 +249,8 @@ def process_job(job_id: str):
                         progress_msg=f"Chunk {current} of {total}")
 
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
-                                progress_callback=_on_synthesis_progress)
+                                progress_callback=_on_synthesis_progress,
+                                chapter_number=chapter.chapter_number)
 
         # Save
         db2 = SessionLocal()
@@ -224,6 +269,7 @@ def process_job(job_id: str):
                 next_chapter_url=chapter.next_chapter_url,
                 novel_id=novel.id if novel else None,
                 source_name=chapter.source_name,
+                chapter_number=chapter.chapter_number,
             )
             db2.add(ch)
             db2.flush()
@@ -278,7 +324,7 @@ def process_job_from_html(job_id: str, html: str):
             _set_status(job_id, "error", error_msg=str(e))
             return
 
-        _set_status(job_id, "synthesizing")
+        _set_status(job_id, "synthesizing", progress_pct=0, progress_msg="Starting synthesis…")
 
         def _on_synthesis_progress(current: int, total: int):
             pct = int(current / total * 100)
@@ -287,7 +333,8 @@ def process_job_from_html(job_id: str, html: str):
                         progress_msg=f"Chunk {current} of {total}")
 
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
-                                progress_callback=_on_synthesis_progress)
+                                progress_callback=_on_synthesis_progress,
+                                chapter_number=chapter.chapter_number)
 
         db2 = SessionLocal()
         try:
@@ -305,6 +352,7 @@ def process_job_from_html(job_id: str, html: str):
                 next_chapter_url=chapter.next_chapter_url,
                 novel_id=novel.id if novel else None,
                 source_name=chapter.source_name,
+                chapter_number=chapter.chapter_number,
             )
             db2.add(ch)
             db2.flush()
@@ -350,7 +398,7 @@ def process_pre_extracted_job(job_id: str, chapter):
         if not job:
             return
 
-        _set_status(job_id, "synthesizing")
+        _set_status(job_id, "synthesizing", progress_pct=0, progress_msg="Starting synthesis…")
 
         def _on_synthesis_progress(current: int, total: int):
             pct = int(current / total * 100)
@@ -359,7 +407,8 @@ def process_pre_extracted_job(job_id: str, chapter):
                         progress_msg=f"Chunk {current} of {total}")
 
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
-                                progress_callback=_on_synthesis_progress)
+                                progress_callback=_on_synthesis_progress,
+                                chapter_number=chapter.chapter_number)
 
         db2 = SessionLocal()
         try:
@@ -377,6 +426,7 @@ def process_pre_extracted_job(job_id: str, chapter):
                 next_chapter_url=chapter.next_chapter_url,
                 novel_id=novel.id if novel else None,
                 source_name=chapter.source_name,
+                chapter_number=chapter.chapter_number,
             )
             db2.add(ch)
             db2.flush()

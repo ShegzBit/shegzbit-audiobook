@@ -38,6 +38,7 @@ class Chapter(Base):
     next_chapter_url = Column(Text, nullable=True)
     novel_id = Column(Integer, ForeignKey("novels.id"), nullable=True)
     source_name = Column(String(50), nullable=True)
+    chapter_number = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     novel = relationship("Novel", back_populates="chapters")

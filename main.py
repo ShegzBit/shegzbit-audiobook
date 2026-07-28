@@ -108,6 +108,7 @@ def _chapter_dict(ch: Chapter) -> dict:
         "next_chapter_url": ch.next_chapter_url,
         "novel_id": ch.novel_id,
         "source": ch.source_name,
+        "chapter_number": getattr(ch, "chapter_number", None),
     }
 
 

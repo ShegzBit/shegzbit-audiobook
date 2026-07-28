@@ -37,17 +37,24 @@ async def _synthesize_chunk(text: str, voice: str, rate: str, out_path: str):
 
 async def _synthesize_all(
     chunks: list[str], voice: str, rate: str, tmp_dir: str,
-    progress_callback=None,
+    progress_callback=None, concurrency: int = 4,
 ) -> list[str]:
-    paths = []
+    sem = asyncio.Semaphore(concurrency)
     total = len(chunks)
-    for i, chunk in enumerate(chunks):
-        out_path = os.path.join(tmp_dir, f"part_{i:04d}.mp3")
-        await _synthesize_chunk(chunk, voice, rate, out_path)
-        paths.append(out_path)
-        if progress_callback:
-            progress_callback(i + 1, total)
-    return paths
+    completed = 0
+
+    async def _one(i: int, chunk: str) -> str:
+        nonlocal completed
+        async with sem:
+            out_path = os.path.join(tmp_dir, f"part_{i:04d}.mp3")
+            await _synthesize_chunk(chunk, voice, rate, out_path)
+            completed += 1
+            if progress_callback:
+                progress_callback(completed, total)
+            return out_path
+
+    paths = await asyncio.gather(*[_one(i, c) for i, c in enumerate(chunks)])
+    return list(paths)
 
 
 def stitch_audio(paths: list[str], pause_ms: int = 450) -> AudioSegment:
@@ -66,13 +73,19 @@ def synthesize(
     rate: str = "+0%",
     title: str = "chapter",
     progress_callback=None,
+    chapter_number: int | None = None,
 ) -> Path:
     OUTPUT_DIR.mkdir(exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")[:60]
-    # Unique-ify by voice+rate suffix to avoid collisions
-    voice_slug = re.sub(r"[^a-z0-9]", "", voice.lower())[:12]
-    rate_slug = re.sub(r"[^a-z0-9]", "", rate)
-    out_path = OUTPUT_DIR / f"{slug}_{voice_slug}_{rate_slug}.mp3"
+    ch_no = chapter_number if chapter_number is not None else 0
+    if ch_no > 0:
+        pat = re.compile(rf"^chapter_?0*{ch_no}_?")
+        while True:
+            new = pat.sub("", slug)
+            if new == slug:
+                break
+            slug = new
+    out_path = OUTPUT_DIR / f"chapter_{ch_no}_{slug}.mp3"
 
     chunks = chunk_text(text)
 

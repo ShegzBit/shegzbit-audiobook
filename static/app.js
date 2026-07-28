@@ -1,6 +1,20 @@
 "use strict";
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function _dlFilename(chapter) {
+  const no = chapter.chapter_number ?? 0;
+  let slug = (chapter.title || 'chapter').replace(/[^a-z0-9 ]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').substring(0, 60);
+  if (no > 0) {
+    const pat = new RegExp(`^chapter_?0*${no}_?`);
+    let prev;
+    do { prev = slug; slug = slug.replace(pat, ''); } while (slug !== prev);
+  }
+  return `chapter_${no}_${slug}.mp3`;
+}
+
+// ---------------------------------------------------------------------------
 // Persistent player
 // ---------------------------------------------------------------------------
 const _player = (() => {
@@ -199,7 +213,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
 
     const inProgress = ['queued', 'fetching', 'extracting', 'synthesizing'].includes(status);
     statusSpinner.style.display = inProgress ? 'block' : 'none';
-    statusLabel.textContent = STATUS_LABELS[status] || status;
+    statusLabel.textContent = (status !== 'synthesizing' && data?.progress_msg) || STATUS_LABELS[status] || status;
     statusLabel.style.color = status === 'done' ? 'var(--success)'
                             : status === 'error' ? 'var(--danger)'
                             : status === 'captcha_blocked' ? 'var(--warn)'
@@ -234,7 +248,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     playerWords.textContent   = `${chapter.word_count.toLocaleString()} words`;
     playerDur.textContent     = estDuration(chapter.word_count);
     playerDl.href             = chapter.audio_url;
-    playerDl.download         = chapter.title.replace(/[^a-z0-9 ]/gi, '_') + '.mp3';
+    playerDl.download         = _dlFilename(chapter);
 
     if (chapter.source) {
       playerSource.textContent = chapter.source;
@@ -298,7 +312,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
         if (toggleAutoDownload.checked && data.chapter?.audio_url) {
           const a = document.createElement('a');
           a.href = data.chapter.audio_url;
-          a.download = data.chapter.title?.replace(/[^a-z0-9 ]/gi, '_') + '.mp3' || 'audio.mp3';
+          a.download = _dlFilename(data.chapter);
           document.body.appendChild(a);
           a.click();
           a.remove();
@@ -626,7 +640,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     playerWords.textContent   = `${chapter.word_count.toLocaleString()} words`;
     playerDur.textContent     = estDuration(chapter.word_count);
     playerDl.href             = chapter.audio_url;
-    playerDl.download         = chapter.title.replace(/[^a-z0-9 ]/gi, '_') + '.mp3';
+    playerDl.download         = _dlFilename(chapter);
     nextRow.style.display     = 'none';
 
     if (chapter.source) {
@@ -652,7 +666,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   function triggerDownload(chapter) {
     const a = document.createElement('a');
     a.href = chapter.audio_url;
-    a.download = (chapter.title || 'chapter').replace(/[^a-z0-9 ]/gi, '_') + '.mp3';
+    a.download = _dlFilename(chapter);
     document.body.appendChild(a);
     a.click();
     a.remove();
