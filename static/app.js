@@ -201,6 +201,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     fetching:         'Fetching page…',
     extracting:       'Extracting chapter text…',
     synthesizing:     'Synthesizing audio (this takes a minute)…',
+    jittering:        'Jittering…',
     done:             'Ready',
     error:            'Error',
     captcha_blocked:  'Verification required',
@@ -211,7 +212,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     captchaBlock.style.display = 'none';
     errorBlock.style.display = 'none';
 
-    const inProgress = ['queued', 'fetching', 'extracting', 'synthesizing'].includes(status);
+    const inProgress = ['queued', 'fetching', 'extracting', 'synthesizing', 'jittering'].includes(status);
     statusSpinner.style.display = inProgress ? 'block' : 'none';
     statusLabel.textContent = (status !== 'synthesizing' && data?.progress_msg) || STATUS_LABELS[status] || status;
     statusLabel.style.color = status === 'done' ? 'var(--success)'
@@ -373,6 +374,19 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
 
   async function autoQueueNext(novelId, episodeId) {
     try {
+      const jitterN = getJitterMultiplier();
+      if (jitterN > 0) {
+        const delayMs = Math.round(Math.random() * jitterN * 60 * 1000);
+        if (delayMs > 0) {
+          playerCard.style.display = 'none';
+          jobStatus.style.display  = 'block';
+          statusSpinner.style.display = 'block';
+          await sleepWithCountdown(delayMs, (label) => {
+            statusLabel.textContent = 'Jittering\u2026 ' + label;
+            statusLabel.style.color = 'var(--muted)';
+          });
+        }
+      }
       const resp = await fetch(`/api/novels/${novelId}/queue-next`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -493,12 +507,14 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   const EXT_ID_KEY        = 'audiobook-juice-ext-id';
   const DELAY_KEY         = 'ext-auto-queue-delay';
   const CAP_KEY           = 'ext-session-cap';
+  const JITTER_KEY        = 'auto-queue-jitter';
 
   const extConfigToggle   = document.getElementById('ext-config-toggle');
   const extConfigPanel    = document.getElementById('ext-config');
   const extIdInput        = document.getElementById('ext-id-input');
   const delayInput        = document.getElementById('delay-input');
   const capInput          = document.getElementById('cap-input');
+  const jitterInput       = document.getElementById('jitter-input');
   const btnScrape         = document.getElementById('btn-scrape');
   const extDot            = document.getElementById('ext-dot');
   const extStatusText     = document.getElementById('ext-status-text');
@@ -510,10 +526,13 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   if (savedDelay) delayInput.value = savedDelay;
   const savedCap = localStorage.getItem(CAP_KEY);
   if (savedCap) capInput.value = savedCap;
+  const savedJitter = localStorage.getItem(JITTER_KEY);
+  if (savedJitter) jitterInput.value = savedJitter;
 
   extIdInput.addEventListener('change', () => localStorage.setItem(EXT_ID_KEY, extIdInput.value.trim()));
   delayInput.addEventListener('change', () => localStorage.setItem(DELAY_KEY, delayInput.value));
   capInput.addEventListener('change', () => localStorage.setItem(CAP_KEY, capInput.value));
+  jitterInput.addEventListener('change', () => localStorage.setItem(JITTER_KEY, jitterInput.value));
 
   extConfigToggle.addEventListener('click', () => {
     const visible = extConfigPanel.style.display !== 'none';
@@ -528,16 +547,34 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     return Math.round(baseMs * jitterFactor);
   }
 
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
   function getBaseDelay() {
     return Math.max(0.5, parseFloat(delayInput.value) || 2);
   }
 
+  function getJitterMultiplier() {
+    return Math.max(0, parseInt(jitterInput.value, 10) || 0);
+  }
+
   function getSessionCap() {
     return Math.max(1, parseInt(capInput.value, 10) || 20);
+  }
+
+  function sleepWithCountdown(ms, onTick) {
+    return new Promise(resolve => {
+      const end = Date.now() + ms;
+      function tick() {
+        const remaining = Math.max(0, end - Date.now());
+        const totalSec = Math.ceil(remaining / 1000);
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        const label = m > 0 ? `${m}m ${s}s` : `${s}s`;
+        onTick(label, remaining);
+        if (remaining <= 0) { resolve(); return; }
+        const nextDelay = Math.min(1000, remaining);
+        setTimeout(tick, nextDelay);
+      }
+      tick();
+    });
   }
 
   // Extension availability check
@@ -761,10 +798,11 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
         return;
       }
       const delayMs = jitteredDelayMs(getBaseDelay());
-      const mins = Math.round(delayMs / 60000);
-      updateSessionCounter(`Waiting ~${mins}m for next chapter…`);
-      setExtStatus('busy', `Next chapter in ~${mins}m`);
-      await sleep(delayMs);
+      await sleepWithCountdown(delayMs, (label) => {
+        updateSessionCounter(`Waiting ${label} for next chapter\u2026`);
+        setExtStatus('busy', `Next chapter in ${label}`);
+      });
+      urlInput.value = nextUrl;
       processChapter(nextUrl, true);
     }
   }
