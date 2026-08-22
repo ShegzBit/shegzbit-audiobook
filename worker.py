@@ -82,6 +82,8 @@ def _get_prefetched_html(url: str) -> Optional[str]:
 
 
 def _set_status(job_id: str, status: str, **kwargs):
+    if status in ("done", "error", "captcha_blocked"):
+        _progress_last_write.pop(job_id, None)
     db = SessionLocal()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -95,6 +97,24 @@ def _set_status(job_id: str, status: str, **kwargs):
         logger.exception(f"Failed to set status {status} for job {job_id}")
     finally:
         db.close()
+
+
+# Throttled synthesis progress reporting: SQLite commits per chunk are
+# wasteful, so persist at most once per second (0%/100% always written).
+PROGRESS_MIN_INTERVAL = 1.0
+_progress_last_write: dict[str, float] = {}
+
+
+def _report_synth_progress(job_id: str, current: int, total: int):
+    pct = int(current / total * 100) if total else 100
+    now = time.monotonic()
+    last = _progress_last_write.get(job_id)
+    if pct not in (0, 100) and last is not None and now - last < PROGRESS_MIN_INTERVAL:
+        return
+    _progress_last_write[job_id] = now
+    _set_status(job_id, "synthesizing",
+                progress_pct=pct,
+                progress_msg=f"Chunk {current} of {total}")
 
 
 def _find_or_create_novel(db, novel_title: Optional[str], novel_index_url: Optional[str]) -> Optional[Novel]:
@@ -243,10 +263,7 @@ def process_job(job_id: str):
         _set_status(job_id, "synthesizing", progress_pct=0, progress_msg="Starting synthesis…")
 
         def _on_synthesis_progress(current: int, total: int):
-            pct = int(current / total * 100)
-            _set_status(job_id, "synthesizing",
-                        progress_pct=pct,
-                        progress_msg=f"Chunk {current} of {total}")
+            _report_synth_progress(job_id, current, total)
 
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
@@ -327,10 +344,7 @@ def process_job_from_html(job_id: str, html: str):
         _set_status(job_id, "synthesizing", progress_pct=0, progress_msg="Starting synthesis…")
 
         def _on_synthesis_progress(current: int, total: int):
-            pct = int(current / total * 100)
-            _set_status(job_id, "synthesizing",
-                        progress_pct=pct,
-                        progress_msg=f"Chunk {current} of {total}")
+            _report_synth_progress(job_id, current, total)
 
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
@@ -401,10 +415,7 @@ def process_pre_extracted_job(job_id: str, chapter):
         _set_status(job_id, "synthesizing", progress_pct=0, progress_msg="Starting synthesis…")
 
         def _on_synthesis_progress(current: int, total: int):
-            pct = int(current / total * 100)
-            _set_status(job_id, "synthesizing",
-                        progress_pct=pct,
-                        progress_msg=f"Chunk {current} of {total}")
+            _report_synth_progress(job_id, current, total)
 
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
