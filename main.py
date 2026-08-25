@@ -63,6 +63,17 @@ os.makedirs("output", exist_ok=True)
 app.mount("/output", StaticFiles(directory="output"), name="output")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 _jinja_env = Environment(loader=FileSystemLoader("templates"), autoescape=True, cache_size=0)
+
+
+def _static_v(path: str) -> int:
+    """Mtime-based cache-buster for static assets."""
+    try:
+        return int(os.path.getmtime(path))
+    except OSError:
+        return 0
+
+
+_jinja_env.globals["static_v"] = _static_v
 templates = Jinja2Templates(env=_jinja_env)
 
 VOICES = {

@@ -133,6 +133,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   const toggleAutoQueue     = document.getElementById('toggle-auto-queue');
   const toggleAutoDownload  = document.getElementById('toggle-auto-download');
   const toggleAutoPlay      = document.getElementById('toggle-auto-play');
+  const toggleExtWait       = document.getElementById('toggle-ext-wait');
 
   // Paste HTML elements
   const pasteHtmlInput  = document.getElementById('paste-html-input');
@@ -147,6 +148,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   initToggle(toggleAutoQueue,    'auto-queue-enabled',    true);
   initToggle(toggleAutoDownload, 'auto-download-enabled', true);
   initToggle(toggleAutoPlay,     'auto-play-enabled',     true);
+  initToggle(toggleExtWait,      'ext-wait-enabled',      false);
 
   let pollingInterval = null;
   let currentJobId    = null;
@@ -797,11 +799,13 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
         updateSessionCounter('Cap reached — done');
         return;
       }
-      const delayMs = jitteredDelayMs(getBaseDelay());
-      await sleepWithCountdown(delayMs, (label) => {
-        updateSessionCounter(`Waiting ${label} for next chapter\u2026`);
-        setExtStatus('busy', `Next chapter in ${label}`);
-      });
+      if (toggleExtWait.checked) {
+        const delayMs = jitteredDelayMs(getBaseDelay());
+        await sleepWithCountdown(delayMs, (label) => {
+          updateSessionCounter(`Waiting ${label} for next chapter\u2026`);
+          setExtStatus('busy', `Next chapter in ${label}`);
+        });
+      }
       urlInput.value = nextUrl;
       processChapter(nextUrl, true);
     }
