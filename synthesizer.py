@@ -56,9 +56,11 @@ CACHE_DIR = OUTPUT_DIR / ".cache"
 PARTS_CACHE = CACHE_DIR / "parts"
 PARTS_LOCAL_CACHE = CACHE_DIR / "parts_local"
 
-DEFAULT_CHUNK_CHARS = 3500
-MIN_ADAPTIVE_CHUNK_CHARS = 1200
-MAX_CHUNK_CHARS = 4500  # safely under the local server's 5000-char limit
+DEFAULT_CHUNK_CHARS = 3500         # edge default (large, few calls)
+LOCAL_DEFAULT_CHUNK_CHARS = 900    # local default (minimal text per call)
+MIN_ADAPTIVE_CHUNK_CHARS = 400
+MAX_CHUNK_CHARS = 4500  # hard ceiling, safely under the local server's 5000-char limit
+DEFAULT_PAUSE_MS = 180             # inter-chunk silence (override with TTS_PAUSE_MS)
 DEFAULT_CONCURRENCY = 8          # edge default
 LOCAL_DEFAULT_CONCURRENCY = 2    # server allows max 2 concurrent
 MAX_CONCURRENCY = 64
@@ -244,13 +246,33 @@ def _adaptive_chunk_chars(text_len: int, concurrency: int) -> int:
     return max(MIN_ADAPTIVE_CHUNK_CHARS, min(MAX_CHUNK_CHARS, ideal))
 
 
-def _chunk_single_wave(text: str, concurrency: int) -> list[str]:
+def _default_chunk_chars(backend: str) -> int:
+    """Per-backend default max chars per chunk.
+
+    Local uses small chunks (minimal text per call); edge keeps the
+    large-call behavior. TTS_CHUNK_CHARS env overrides both.
+    """
+    if "TTS_CHUNK_CHARS" in os.environ:
+        return _env_int("TTS_CHUNK_CHARS", DEFAULT_CHUNK_CHARS)
+    return LOCAL_DEFAULT_CHUNK_CHARS if backend == "local" else DEFAULT_CHUNK_CHARS
+
+
+def _chunk_single_wave(text: str, concurrency: int,
+                       max_target: int | None = None) -> list[str]:
     """Chunk text to fit one parallel wave, growing the target size until
-    packing overhead/paragraph boundaries stop forcing extra waves."""
-    target = _adaptive_chunk_chars(len(text), concurrency)
+    packing overhead/paragraph boundaries stop forcing extra waves.
+
+    max_target caps the growth so small-chunk modes (e.g. local ~900
+    chars) are never grown back into large chunks; when the adaptive
+    target already exceeds max_target the result is fixed-size chunking.
+    """
+    if max_target is None:
+        max_target = MAX_CHUNK_CHARS
+    max_target = max(1, min(MAX_CHUNK_CHARS, int(max_target)))
+    target = min(_adaptive_chunk_chars(len(text), concurrency), max_target)
     chunks = chunk_text(text, target)
-    while len(chunks) > concurrency and target < MAX_CHUNK_CHARS:
-        target = min(MAX_CHUNK_CHARS, int(target * len(chunks) / concurrency) + 1)
+    while len(chunks) > concurrency and target < max_target:
+        target = min(max_target, int(target * len(chunks) / concurrency) + 1)
         chunks = chunk_text(text, target)
     return chunks
 
@@ -682,6 +704,25 @@ def check_local_health(base_url: str | None = None, timeout: float = 5.0) -> dic
 # Public API
 # ---------------------------------------------------------------------------
 
+def _require_ffmpeg() -> None:
+    """Fail fast with an actionable message when ffmpeg/ffprobe are missing.
+
+    Both are required: ffprobe validates chunk audio, ffmpeg stitches parts,
+    and the pydub fallback also shells out to ffmpeg. Without this check a
+    missing binary surfaces later as a confusing "implausibly short audio"
+    RuntimeError.
+    """
+    if shutil.which("ffmpeg") and shutil.which("ffprobe"):
+        return
+    raise RuntimeError(
+        "ffmpeg and ffprobe are required but were not found on PATH. "
+        "Install them and re-run: "
+        "Windows (winget): 'winget install Gyan.FFmpeg' then open a new terminal; "
+        "Debian/Ubuntu: 'sudo apt install ffmpeg'; "
+        "macOS: 'brew install ffmpeg'."
+    )
+
+
 def synthesize(
     text: str,
     voice: str = "en-US-BrianNeural",
@@ -692,6 +733,7 @@ def synthesize(
     backend: str | None = None,
     base_url: str | None = None,
 ) -> Path:
+    _require_ffmpeg()
     backend = resolve_backend(backend)
     base = resolve_base_url(base_url) if backend == "local" else ""
     if backend == "local" and (not voice or not voice.strip()):
@@ -717,7 +759,8 @@ def synthesize(
     if "TTS_CHUNK_CHARS" in os.environ:
         chunks = chunk_text(text)
     else:
-        chunks = _chunk_single_wave(text, concurrency)
+        chunks = _chunk_single_wave(text, concurrency,
+                                    max_target=_default_chunk_chars(backend))
     if not chunks:
         raise ValueError("No text to synthesize.")
 
@@ -728,7 +771,7 @@ def synthesize(
                             concurrency=concurrency,
                             backend=backend, base_url=base)
         )
-        pause_ms = 450
+        pause_ms = _env_int("TTS_PAUSE_MS", DEFAULT_PAUSE_MS, lo=0, hi=5000)
         if len(paths) > 1 and not _stitch_ffmpeg(paths, pause_ms, out_path):
             stitch_audio(paths, pause_ms).export(str(out_path), format="mp3")
         elif len(paths) == 1:

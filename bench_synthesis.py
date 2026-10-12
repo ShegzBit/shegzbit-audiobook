@@ -13,8 +13,9 @@ Usage:
                               [--keep] [--json]
 
 Environment (honoured by newer synthesizer versions):
-    TTS_CONCURRENCY   parallel edge-tts requests (default 8 in new code)
-    TTS_CHUNK_CHARS   max characters per chunk (default 3500 in new code)
+    TTS_CONCURRENCY   parallel syntheses (local capped at 2, edge default 8)
+    TTS_CHUNK_CHARS   max characters per chunk (local default 900, edge 3500)
+    TTS_PAUSE_MS      silence stitched between chunks in ms (default 180)
 """
 
 import argparse

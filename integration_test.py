@@ -1,7 +1,8 @@
 """One-shot integration checks for the optimized pipeline.
 
-Creates its own sqlite db + output dir under /tmp/opencode/e2e.
-Run: .venv/bin/python integration_test.py
+Creates its own sqlite db + output dir under the OS temp dir.
+Run (Linux/macOS): .venv/bin/python integration_test.py
+Run (Windows PowerShell): .\.venv\Scripts\python.exe integration_test.py
 """
 
 import os
