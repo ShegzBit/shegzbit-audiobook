@@ -1,51 +1,74 @@
 """
-synthesizer.py — TTS synthesis using edge-tts + ffmpeg.
-synthesize(text, voice, rate, title) -> Path to finished MP3.
+synthesizer.py — TTS synthesis with pluggable backends (local + edge-tts) + ffmpeg.
 
-Performance features:
+synthesize(text, voice, rate, title, backend=None, base_url=None) -> Path to MP3.
+
+Backends:
+- "local" (default): POST {base_url}/api/tts {"text","voice","speed"} -> audio/wav.
+  Base URL default http://127.0.0.1:5001; other endpoints are appended
+  ({base}/api/voices, {base}/health). Concurrency defaults to 2 (server
+  allows max 2 concurrent syntheses, 503 on overload) with 503-aware retry.
+- "edge": edge-tts Communicate(text, voice, rate).save() -> mp3.
+  Concurrency default 8. Kept as fallback via UI toggle.
+
+Performance features (both backends):
 - Adaptive sentence-boundary chunking sized so all chunks synthesize in
   a single parallel wave (override with TTS_CHUNK_CHARS).
-- Parallel synthesis bounded by TTS_CONCURRENCY (default 8) sharing one
-  aiohttp connection pool, with per-chunk retry + exponential backoff.
-- Content-keyed chunk cache under output/.cache/parts, keyed by
-  sha256(chunk_text + voice + rate). Retries/resubmits skip finished
-  chunks; a captcha or garbage extraction hashes to a different key, so
-  bad audio can never be served on retry.
-- Cached parts are only trusted when their duration is plausible for the
-  text length (rejects truncated/empty/error MP3s). The cache grows
-  unbounded by design; clear output/.cache/parts to reclaim space.
-- Stitching uses ffmpeg's concat demuxer with stream copy (-c copy) so
-  the final file is never fully decoded/re-encoded; falls back to pydub.
-
-Measured on ~5k-word chapter (30k chars), same machine/connection:
-~183s baseline -> ~38s with TTS_CONCURRENCY=32; ~70-110s at default 8.
+- Parallel synthesis bounded by TTS_CONCURRENCY sharing one aiohttp
+  session, with per-chunk retry + exponential backoff.
+- Content-keyed chunk cache: output/.cache/parts (edge .mp3) and
+  output/.cache/parts_local (local .wav), keyed by
+  sha256(chunk + voice + rate/speed + backend).
+- Cached parts trusted only when duration plausible for text length.
+- Stitching: edge mp3 parts use concat demuxer stream copy (-c copy);
+  local wav parts are concat + libmp3lame re-encode to final mp3.
+  Falls back to pydub.
 """
 
 import asyncio
 import hashlib
+import logging
 import os
 import random
 import re
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 import aiohttp
-import edge_tts
-from edge_tts.exceptions import EdgeTTSException
 from pydub import AudioSegment
+
+try:
+    import edge_tts
+    from edge_tts.exceptions import EdgeTTSException
+    _EDGE_AVAILABLE = True
+except Exception:  # edge-tts optional when running local-only
+    edge_tts = None  # type: ignore
+    EdgeTTSException = Exception  # type: ignore
+    _EDGE_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = Path("output")
 CACHE_DIR = OUTPUT_DIR / ".cache"
 PARTS_CACHE = CACHE_DIR / "parts"
+PARTS_LOCAL_CACHE = CACHE_DIR / "parts_local"
 
 DEFAULT_CHUNK_CHARS = 3500
 MIN_ADAPTIVE_CHUNK_CHARS = 1200
-MAX_CHUNK_CHARS = 4500
-DEFAULT_CONCURRENCY = 8
+MAX_CHUNK_CHARS = 4500  # safely under the local server's 5000-char limit
+DEFAULT_CONCURRENCY = 8          # edge default
+LOCAL_DEFAULT_CONCURRENCY = 2    # server allows max 2 concurrent
 MAX_CONCURRENCY = 64
 RETRY_ATTEMPTS = 3
+LOCAL_RETRY_ATTEMPTS = 4
+
+DEFAULT_TTS_BASE_URL = "http://127.0.0.1:5001"
+DEFAULT_BACKEND = "local"
+LOCAL_DEFAULT_VOICE = "Bella"
+TTS_TIMEOUT_S = 120
 
 # Speech is never faster than ~40 chars/sec; anything shorter than that
 # bound for its text is treated as truncated/failed audio.
@@ -62,6 +85,18 @@ _RETRYABLE_ERRORS = (
 )
 
 
+class LocalTTSError(RuntimeError):
+    pass
+
+
+class LocalTTSOverloaded(LocalTTSError):
+    """503/429 from the local server — retryable with backoff."""
+
+
+class LocalTTSBadRequest(LocalTTSError):
+    """400 from the local server — not retryable (bad voice/text/speed)."""
+
+
 def _env_int(name: str, default: int, lo: int = 1, hi: int | None = None) -> int:
     try:
         val = int(os.environ.get(name, "").strip() or default)
@@ -71,6 +106,69 @@ def _env_int(name: str, default: int, lo: int = 1, hi: int | None = None) -> int
     if hi is not None:
         val = min(hi, val)
     return val
+
+
+# ---------------------------------------------------------------------------
+# Backend / URL / speed helpers
+# ---------------------------------------------------------------------------
+
+def normalize_base_url(url: str | None) -> str:
+    """Normalize a user- or env-provided base URL.
+
+    Accepts the bare base (http://127.0.0.1:5001), a trailing slash, or a
+    full endpoint URL pasted by mistake (http://127.0.0.1:5001/api/tts);
+    always returns the bare base so callers can append endpoints.
+    """
+    raw = (url or "").strip().rstrip("/")
+    if not raw:
+        return DEFAULT_TTS_BASE_URL
+    # Strip a mistakenly pasted endpoint suffix.
+    for suffix in ("/api/tts", "/api/voices", "/health", "/api"):
+        if raw.endswith(suffix):
+            raw = raw[: -len(suffix)].rstrip("/")
+            break
+    return raw or DEFAULT_TTS_BASE_URL
+
+
+def resolve_base_url(explicit: str | None = None) -> str:
+    if explicit and explicit.strip():
+        return normalize_base_url(explicit)
+    for env_name in ("TTS_BASE_URL", "TTS_ENDPOINT_URL"):
+        val = os.environ.get(env_name, "").strip()
+        if val:
+            return normalize_base_url(val)
+    return DEFAULT_TTS_BASE_URL
+
+
+def resolve_backend(explicit: str | None = None) -> str:
+    if explicit and explicit.strip().lower() in ("local", "edge"):
+        return explicit.strip().lower()
+    env = os.environ.get("TTS_BACKEND", "").strip().lower()
+    if env in ("local", "edge"):
+        return env
+    return DEFAULT_BACKEND
+
+
+def rate_to_speed(rate: str | float | int | None) -> float:
+    """Map legacy '+X%' rate strings (and floats) to local speed 0.5-2.0.
+
+    '+0%' -> 1.0, '+20%' -> 1.2, '-10%' -> 0.9, '1.25'/1.25 -> 1.25.
+    Clamped to [0.5, 2.0] per server limits.
+    """
+    if rate is None or rate == "":
+        return 1.0
+    if isinstance(rate, (int, float)):
+        try:
+            return max(0.5, min(2.0, float(rate)))
+        except (TypeError, ValueError):
+            return 1.0
+    s = str(rate).strip().rstrip("%").strip()
+    try:
+        if s.startswith("+") or s.startswith("-"):
+            return max(0.5, min(2.0, 1.0 + float(s) / 100.0))
+        return max(0.5, min(2.0, float(s)))
+    except ValueError:
+        return 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +259,12 @@ def _chunk_single_wave(text: str, concurrency: int) -> list[str]:
 # Cache + validation helpers
 # ---------------------------------------------------------------------------
 
-def _cache_key(chunk: str, voice: str, rate: str) -> str:
+def _cache_key(chunk: str, voice: str, rate: str, backend: str = "edge") -> str:
+    if backend == "local":
+        speed = f"{rate_to_speed(rate):.3f}"
+        return hashlib.sha256(
+            f"local\x00{chunk}\x00{voice}\x00{speed}".encode("utf-8")
+        ).hexdigest()
     return hashlib.sha256(f"{chunk}\x00{voice}\x00{rate}".encode("utf-8")).hexdigest()
 
 
@@ -197,29 +300,34 @@ def _plausible_audio(probe: dict | None, n_chars: int) -> bool:
     return dur >= n_chars / MIN_CHARS_PER_SEC
 
 
-def _cached_part_path(key: str) -> Path:
+def _cached_part_path(key: str, backend: str = "edge") -> Path:
+    if backend == "local":
+        PARTS_LOCAL_CACHE.mkdir(parents=True, exist_ok=True)
+        return PARTS_LOCAL_CACHE / f"{key}.wav"
     PARTS_CACHE.mkdir(parents=True, exist_ok=True)
     return PARTS_CACHE / f"{key}.mp3"
 
 
 # ---------------------------------------------------------------------------
-# Synthesis
+# Synthesis — edge backend
 # ---------------------------------------------------------------------------
 
-async def _synthesize_chunk(text: str, voice: str, rate: str, out_path: str,
-                            connector=None):
+async def _synthesize_chunk_edge(text: str, voice: str, rate: str, out_path: str,
+                                 connector=None):
+    if not _EDGE_AVAILABLE:
+        raise RuntimeError("edge-tts is not installed; use backend='local'.")
     communicate = edge_tts.Communicate(
         text, voice=voice, rate=rate, connector=connector,
     )
     await communicate.save(out_path)
 
 
-async def _synthesize_chunk_retry(text: str, voice: str, rate: str,
-                                  out_path: str, connector=None):
+async def _synthesize_chunk_edge_retry(text: str, voice: str, rate: str,
+                                       out_path: str, connector=None):
     delay = 1.0
     for attempt in range(1, RETRY_ATTEMPTS + 1):
         try:
-            await _synthesize_chunk(text, voice, rate, out_path, connector)
+            await _synthesize_chunk_edge(text, voice, rate, out_path, connector)
             return
         except _RETRYABLE_ERRORS:
             if attempt == RETRY_ATTEMPTS:
@@ -228,13 +336,97 @@ async def _synthesize_chunk_retry(text: str, voice: str, rate: str,
             delay *= 2
 
 
+# ---------------------------------------------------------------------------
+# Synthesis — local backend
+# ---------------------------------------------------------------------------
+
+async def _synthesize_chunk_local(text: str, voice: str, speed: float,
+                                  out_path: str,
+                                  base_url: str,
+                                  session: aiohttp.ClientSession):
+    """Single POST to {base_url}/api/tts. Raises retryable/non-retryable errors."""
+    if len(text) > 5000:
+        raise LocalTTSBadRequest(f"Chunk too long ({len(text)} chars > 5000).")
+    url = f"{base_url.rstrip('/')}/api/tts"
+    timeout = aiohttp.ClientTimeout(total=TTS_TIMEOUT_S)
+    try:
+        async with session.post(
+            url, json={"text": text, "voice": voice, "speed": speed},
+            timeout=timeout,
+        ) as resp:
+            if resp.status in (429, 503):
+                retry_after = resp.headers.get("Retry-After")
+                hint = f" (Retry-After: {retry_after})" if retry_after else ""
+                raise LocalTTSOverloaded(f"Server overloaded (HTTP {resp.status}){hint}.")
+            if resp.status == 400:
+                try:
+                    detail = (await resp.text())[:300]
+                except Exception:
+                    detail = ""
+                raise LocalTTSBadRequest(f"Local TTS rejected request (400): {detail}")
+            if resp.status != 200:
+                try:
+                    detail = (await resp.text())[:300]
+                except Exception:
+                    detail = ""
+                raise LocalTTSError(f"Local TTS HTTP {resp.status}: {detail}")
+            ctype = resp.headers.get("Content-Type", "")
+            data = await resp.read()
+            if not data:
+                raise LocalTTSError("Local TTS returned empty body.")
+            if "audio" not in ctype and "octet-stream" not in ctype and "wav" not in ctype:
+                # Some servers return wav with generic types; only hard-fail
+                # on obvious JSON error payloads.
+                if ctype.startswith("application/json"):
+                    raise LocalTTSBadRequest(f"Local TTS error payload: {data[:300]!r}")
+            Path(out_path).write_bytes(data)
+    except (LocalTTSBadRequest, LocalTTSOverloaded):
+        raise
+    except (asyncio.TimeoutError, TimeoutError, aiohttp.ClientError) as e:
+        raise LocalTTSError(f"Local TTS transport error: {e}") from e
+
+
+async def _synthesize_chunk_local_retry(text: str, voice: str, speed: float,
+                                        out_path: str, base_url: str,
+                                        session: aiohttp.ClientSession):
+    delay = 1.5
+    for attempt in range(1, LOCAL_RETRY_ATTEMPTS + 1):
+        try:
+            await _synthesize_chunk_local(text, voice, speed, out_path,
+                                          base_url, session)
+            return
+        except LocalTTSBadRequest:
+            raise  # never retry 400s
+        except (LocalTTSOverloaded, LocalTTSError,
+                asyncio.TimeoutError, TimeoutError,
+                aiohttp.ClientError, ConnectionError) as e:
+            if attempt == LOCAL_RETRY_ATTEMPTS:
+                raise
+            logger.warning("Local TTS chunk failed (attempt %d/%d): %s",
+                           attempt, LOCAL_RETRY_ATTEMPTS, e)
+            await asyncio.sleep(delay + random.uniform(0, 0.5))
+            delay *= 2
+
+
 async def _synthesize_all(
     chunks: list[str], voice: str, rate: str, tmp_dir: str,
     progress_callback=None, concurrency: int | None = None,
+    backend: str = "edge", base_url: str | None = None,
 ) -> list[str]:
+    backend = resolve_backend(backend)
+    base = resolve_base_url(base_url) if backend == "local" else ""
     if concurrency is None:
-        concurrency = _env_int("TTS_CONCURRENCY", DEFAULT_CONCURRENCY,
-                               hi=MAX_CONCURRENCY)
+        if backend == "local":
+            # Server caps at 2 concurrent syntheses — clamp to avoid
+            # guaranteed 503s even if TTS_CONCURRENCY is set high for edge.
+            concurrency = _env_int("TTS_CONCURRENCY", LOCAL_DEFAULT_CONCURRENCY,
+                                   hi=LOCAL_DEFAULT_CONCURRENCY)
+        else:
+            concurrency = _env_int("TTS_CONCURRENCY", DEFAULT_CONCURRENCY,
+                                   hi=MAX_CONCURRENCY)
+    else:
+        if backend == "local":
+            concurrency = max(1, min(int(concurrency), LOCAL_DEFAULT_CONCURRENCY))
 
     sem = asyncio.Semaphore(concurrency)
     total = len(chunks)
@@ -246,18 +438,25 @@ async def _synthesize_all(
         if progress_callback:
             progress_callback(completed, total)
 
-    async def _one(i: int, chunk: str) -> str:
-        nonlocal completed
-        part_path = os.path.join(tmp_dir, f"part_{i:04d}.mp3")
-        key = _cache_key(chunk, voice, rate)
-        cached = _cached_part_path(key)
+    speed = rate_to_speed(rate) if backend == "local" else 0.0
+    ext = "wav" if backend == "local" else "mp3"
+
+    async def _one(i: int, chunk: str, session=None) -> str:
+        part_path = os.path.join(tmp_dir, f"part_{i:04d}.{ext}")
+        key = _cache_key(chunk, voice, rate, backend)
+        cached = _cached_part_path(key, backend)
         async with sem:
             probe = _probe_audio(cached)
-            if _plausible_audio(probe, len(chunk)):
+            if cached.exists() and _plausible_audio(probe, len(chunk)):
                 shutil.copyfile(cached, part_path)
                 _done()
                 return part_path
-            await _synthesize_chunk_retry(chunk, voice, rate, part_path)
+            if backend == "local":
+                assert session is not None
+                await _synthesize_chunk_local_retry(chunk, voice, speed,
+                                                    part_path, base, session)
+            else:
+                await _synthesize_chunk_edge_retry(chunk, voice, rate, part_path)
             probe = _probe_audio(Path(part_path))
             if not _plausible_audio(probe, len(chunk)):
                 raise RuntimeError(
@@ -270,7 +469,15 @@ async def _synthesize_all(
             _done()
             return part_path
 
-    # One shared connection pool for all chunk requests.
+    if backend == "local":
+        connector = aiohttp.TCPConnector(limit=concurrency * 2)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            paths = await asyncio.gather(
+                *[_one(i, c, session) for i, c in enumerate(chunks)]
+            )
+        return list(paths)
+
+    # Edge path: one shared connection pool for all chunk requests.
     connector = aiohttp.TCPConnector(limit=concurrency * 2)
     try:
         paths = await asyncio.gather(*[_one(i, c) for i, c in enumerate(chunks)])
@@ -283,12 +490,19 @@ async def _synthesize_all(
 # Stitching
 # ---------------------------------------------------------------------------
 
+def _load_part(path: str) -> AudioSegment:
+    p = Path(path)
+    if p.suffix.lower() == ".wav":
+        return AudioSegment.from_wav(p)
+    return AudioSegment.from_mp3(p)
+
+
 def stitch_audio(paths: list[str], pause_ms: int = 450) -> AudioSegment:
     """Legacy in-memory stitch used as the fallback path."""
     silence = AudioSegment.silent(duration=pause_ms)
     combined = AudioSegment.empty()
     for i, p in enumerate(paths):
-        combined += AudioSegment.from_mp3(p)
+        combined += _load_part(p)
         if i != len(paths) - 1:
             combined += silence
     return combined
@@ -315,14 +529,44 @@ def _ensure_silence_mp3(sample_rate: int, channels: int, bit_rate: int,
     return path if path.exists() and path.stat().st_size > 0 else None
 
 
+def _ensure_silence_wav(sample_rate: int, channels: int,
+                        pause_ms: int) -> Path | None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    layout = "mono" if channels <= 1 else "stereo"
+    path = CACHE_DIR / f"silence_{sample_rate}_{layout}_{pause_ms}.wav"
+    if path.exists() and path.stat().st_size > 0:
+        return path
+    try:
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y",
+             "-f", "lavfi", "-i", f"anullsrc=r={sample_rate}:cl={layout}",
+             "-t", str(pause_ms / 1000.0),
+             str(path)],
+            check=True, timeout=30, capture_output=True,
+        )
+    except Exception:
+        return None
+    return path if path.exists() and path.stat().st_size > 0 else None
+
+
 def _stitch_ffmpeg(parts: list[str], pause_ms: int, out_path: Path) -> bool:
-    """Stream-copy concatenation via the concat demuxer. No re-encode."""
+    """Concat via the concat demuxer.
+
+    MP3 parts: stream copy (-c copy), no re-encode.
+    WAV parts (local backend): re-encode to MP3 via libmp3lame.
+    """
     list_path = None
     try:
+        is_wav = Path(parts[0]).suffix.lower() == ".wav"
         probe = _probe_audio(Path(parts[0]))
-        silence = (_ensure_silence_mp3(probe["sample_rate"], probe["channels"],
-                                       probe["bit_rate"], pause_ms)
-                   if probe else None)
+        if is_wav:
+            silence = (_ensure_silence_wav(probe["sample_rate"], probe["channels"],
+                                           pause_ms)
+                       if probe else None)
+        else:
+            silence = (_ensure_silence_mp3(probe["sample_rate"], probe["channels"],
+                                           probe["bit_rate"], pause_ms)
+                       if probe else None)
         lines = []
         for i, p in enumerate(parts):
             lines.append(f"file '{Path(p).resolve()}'")
@@ -335,12 +579,15 @@ def _stitch_ffmpeg(parts: list[str], pause_ms: int, out_path: Path) -> bool:
             fh.write("\n".join(lines) + "\n")
             list_path = fh.name
 
-        subprocess.run(
-            ["ffmpeg", "-v", "error", "-y",
-             "-f", "concat", "-safe", "0", "-i", list_path,
-             "-c", "copy", str(out_path)],
-            check=True, timeout=600, capture_output=True,
-        )
+        if is_wav:
+            cmd = ["ffmpeg", "-v", "error", "-y",
+                   "-f", "concat", "-safe", "0", "-i", list_path,
+                   "-c:a", "libmp3lame", "-b:a", "128k", str(out_path)]
+        else:
+            cmd = ["ffmpeg", "-v", "error", "-y",
+                   "-f", "concat", "-safe", "0", "-i", list_path,
+                   "-c", "copy", str(out_path)]
+        subprocess.run(cmd, check=True, timeout=600, capture_output=True)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         return out_path.exists() and out_path.stat().st_size > 0
     except Exception:
@@ -354,6 +601,84 @@ def _stitch_ffmpeg(parts: list[str], pause_ms: int, out_path: Path) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Sync helpers for the web layer (voices / health)
+# ---------------------------------------------------------------------------
+
+_voices_cache: dict[str, tuple[float, list]] = {}
+_VOICES_TTL = 60.0
+
+
+def _parse_voices_payload(data) -> list:
+    """Accept the shapes a local server might return and normalize to
+    [{"id":..., "label":...}]."""
+    if isinstance(data, dict):
+        for key in ("voices", "data", "items"):
+            if isinstance(data.get(key), list):
+                data = data[key]
+                break
+        else:
+            return []
+    if not isinstance(data, list):
+        return []
+    out = []
+    for item in data:
+        if isinstance(item, str):
+            out.append({"id": item, "label": item})
+        elif isinstance(item, dict):
+            vid = (item.get("id") or item.get("name") or item.get("voice")
+                   or item.get("short_name") or "")
+            label = (item.get("label") or item.get("display_name") or vid)
+            if vid:
+                out.append({"id": str(vid), "label": str(label)})
+    return out
+
+
+def fetch_local_voices(base_url: str | None = None, timeout: float = 10.0) -> list:
+    """Synchronous fetch of {base}/api/voices with short TTL cache."""
+    import json as _json
+    import urllib.request
+    base = resolve_base_url(base_url)
+    now = time.monotonic()
+    hit = _voices_cache.get(base)
+    if hit and now - hit[0] < _VOICES_TTL:
+        return hit[1]
+    url = f"{base.rstrip('/')}/api/voices"
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            payload = _json.loads(resp.read().decode("utf-8") or "null")
+        voices = _parse_voices_payload(payload)
+        if voices:
+            _voices_cache[base] = (now, voices)
+        return voices
+    except Exception as e:
+        logger.warning("fetch_local_voices(%s) failed: %s", base, e)
+        if hit:
+            return hit[1]
+        return []
+
+
+def check_local_health(base_url: str | None = None, timeout: float = 5.0) -> dict:
+    """Synchronous GET {base}/health -> {"ok": bool, ...}."""
+    import json as _json
+    import urllib.request
+    base = resolve_base_url(base_url)
+    url = f"{base.rstrip('/')}/health"
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8")[:2000]
+            try:
+                payload = _json.loads(body or "{}")
+            except Exception:
+                payload = {"raw": body}
+            return {"ok": 200 <= resp.status < 300, "status": resp.status,
+                    "base_url": base, "payload": payload}
+    except Exception as e:
+        return {"ok": False, "base_url": base, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -364,7 +689,14 @@ def synthesize(
     title: str = "chapter",
     progress_callback=None,
     chapter_number: int | None = None,
+    backend: str | None = None,
+    base_url: str | None = None,
 ) -> Path:
+    backend = resolve_backend(backend)
+    base = resolve_base_url(base_url) if backend == "local" else ""
+    if backend == "local" and (not voice or not voice.strip()):
+        voice = LOCAL_DEFAULT_VOICE
+
     OUTPUT_DIR.mkdir(exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")[:60]
     ch_no = chapter_number if chapter_number is not None else 0
@@ -377,7 +709,11 @@ def synthesize(
             slug = new
     out_path = OUTPUT_DIR / f"chapter_{ch_no}_{slug}.mp3"
 
-    concurrency = _env_int("TTS_CONCURRENCY", DEFAULT_CONCURRENCY, hi=MAX_CONCURRENCY)
+    if backend == "local":
+        concurrency = _env_int("TTS_CONCURRENCY", LOCAL_DEFAULT_CONCURRENCY,
+                               hi=LOCAL_DEFAULT_CONCURRENCY)
+    else:
+        concurrency = _env_int("TTS_CONCURRENCY", DEFAULT_CONCURRENCY, hi=MAX_CONCURRENCY)
     if "TTS_CHUNK_CHARS" in os.environ:
         chunks = chunk_text(text)
     else:
@@ -389,12 +725,18 @@ def synthesize(
         paths = asyncio.run(
             _synthesize_all(chunks, voice, rate, tmp_dir,
                             progress_callback=progress_callback,
-                            concurrency=concurrency)
+                            concurrency=concurrency,
+                            backend=backend, base_url=base)
         )
         pause_ms = 450
         if len(paths) > 1 and not _stitch_ffmpeg(paths, pause_ms, out_path):
             stitch_audio(paths, pause_ms).export(str(out_path), format="mp3")
         elif len(paths) == 1:
-            shutil.copyfile(paths[0], out_path)
+            # Single local wav part still needs wav->mp3 conversion.
+            if Path(paths[0]).suffix.lower() == ".wav":
+                if not _stitch_ffmpeg(paths, 0, out_path):
+                    _load_part(paths[0]).export(str(out_path), format="mp3")
+            else:
+                shutil.copyfile(paths[0], out_path)
 
     return out_path

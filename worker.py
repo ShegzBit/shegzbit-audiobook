@@ -24,7 +24,7 @@ from errors import CaptchaError, EmptyExtractionError, HttpError, NetworkError, 
 from extractor import extract_chapter, fetch_html
 from models import Chapter, Episode, Job, Novel
 from retry import retry
-from synthesizer import synthesize
+from synthesizer import resolve_backend, resolve_base_url, synthesize
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +117,14 @@ def _report_synth_progress(job_id: str, current: int, total: int):
                 progress_msg=f"Chunk {current} of {total}")
 
 
+def _job_tts(job) -> tuple[str, str]:
+    """Return (backend, base_url) for a job, falling back to env defaults
+    for rows created before the tts columns existed."""
+    backend = getattr(job, "tts_backend", None) or resolve_backend(None)
+    base = getattr(job, "tts_base_url", None) or resolve_base_url(None)
+    return backend, base
+
+
 def _find_or_create_novel(db, novel_title: Optional[str], novel_index_url: Optional[str]) -> Optional[Novel]:
     if not novel_title:
         return None
@@ -172,6 +180,8 @@ def _save_chapter_record(job_id: str, chapter, db=None):
             url=job.url,
             voice=job.voice,
             rate=job.rate,
+            tts_backend=getattr(job, "tts_backend", None),
+            tts_base_url=getattr(job, "tts_base_url", None),
             title=chapter.title,
             word_count=chapter.word_count,
             audio_path=chapter.audio_path if hasattr(chapter, "audio_path") else "",
@@ -265,9 +275,11 @@ def process_job(job_id: str):
         def _on_synthesis_progress(current: int, total: int):
             _report_synth_progress(job_id, current, total)
 
+        backend, base = _job_tts(job)
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
-                                chapter_number=chapter.chapter_number)
+                                chapter_number=chapter.chapter_number,
+                                backend=backend, base_url=base)
 
         # Save
         db2 = SessionLocal()
@@ -280,6 +292,8 @@ def process_job(job_id: str):
                 url=job2.url,
                 voice=job2.voice,
                 rate=job2.rate,
+                tts_backend=backend,
+                tts_base_url=base,
                 title=chapter.title,
                 word_count=chapter.word_count,
                 audio_path=str(audio_path),
@@ -346,9 +360,11 @@ def process_job_from_html(job_id: str, html: str):
         def _on_synthesis_progress(current: int, total: int):
             _report_synth_progress(job_id, current, total)
 
+        backend, base = _job_tts(job)
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
-                                chapter_number=chapter.chapter_number)
+                                chapter_number=chapter.chapter_number,
+                                backend=backend, base_url=base)
 
         db2 = SessionLocal()
         try:
@@ -360,6 +376,8 @@ def process_job_from_html(job_id: str, html: str):
                 url=job2.url,
                 voice=job2.voice,
                 rate=job2.rate,
+                tts_backend=backend,
+                tts_base_url=base,
                 title=chapter.title,
                 word_count=chapter.word_count,
                 audio_path=str(audio_path),
@@ -417,9 +435,11 @@ def process_pre_extracted_job(job_id: str, chapter):
         def _on_synthesis_progress(current: int, total: int):
             _report_synth_progress(job_id, current, total)
 
+        backend, base = _job_tts(job)
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
-                                chapter_number=chapter.chapter_number)
+                                chapter_number=chapter.chapter_number,
+                                backend=backend, base_url=base)
 
         db2 = SessionLocal()
         try:
@@ -431,6 +451,8 @@ def process_pre_extracted_job(job_id: str, chapter):
                 url=job2.url,
                 voice=job2.voice,
                 rate=job2.rate,
+                tts_backend=backend,
+                tts_base_url=base,
                 title=chapter.title,
                 word_count=chapter.word_count,
                 audio_path=str(audio_path),
@@ -471,11 +493,15 @@ def process_pre_extracted_job(job_id: str, chapter):
         db.close()
 
 
-def enqueue_job(url: str, voice: str, rate: str) -> str:
+def enqueue_job(url: str, voice: str, rate: str,
+                backend: str | None = None, base_url: str | None = None) -> str:
+    backend = resolve_backend(backend)
+    base = resolve_base_url(base_url)
     db = SessionLocal()
     try:
         job_id = str(uuid.uuid4())
-        job = Job(id=job_id, url=url, voice=voice, rate=rate, status="queued")
+        job = Job(id=job_id, url=url, voice=voice, rate=rate,
+                  tts_backend=backend, tts_base_url=base, status="queued")
         db.add(job)
         db.commit()
     finally:
@@ -485,11 +511,16 @@ def enqueue_job(url: str, voice: str, rate: str) -> str:
     return job_id
 
 
-def enqueue_job_with_html(url: str, html: str, voice: str, rate: str) -> str:
+def enqueue_job_with_html(url: str, html: str, voice: str, rate: str,
+                          backend: str | None = None,
+                          base_url: str | None = None) -> str:
+    backend = resolve_backend(backend)
+    base = resolve_base_url(base_url)
     db = SessionLocal()
     try:
         job_id = str(uuid.uuid4())
-        job = Job(id=job_id, url=url, voice=voice, rate=rate, status="queued")
+        job = Job(id=job_id, url=url, voice=voice, rate=rate,
+                  tts_backend=backend, tts_base_url=base, status="queued")
         db.add(job)
         db.commit()
     finally:

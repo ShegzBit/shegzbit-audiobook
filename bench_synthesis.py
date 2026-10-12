@@ -89,8 +89,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--words", type=int, default=5000)
     ap.add_argument("--runs", type=int, default=1)
-    ap.add_argument("--voice", default="en-US-BrianNeural")
+    ap.add_argument("--voice", default=None)
     ap.add_argument("--rate", default="+0%")
+    ap.add_argument("--backend", default=None,
+                    help="tts backend: local (default) or edge")
+    ap.add_argument("--base-url", default=None,
+                    help="local TTS base URL (default http://127.0.0.1:5001)")
     ap.add_argument("--title", default="bench")
     ap.add_argument("--keep", action="store_true", help="keep output files")
     ap.add_argument("--json", action="store_true", help="print machine-readable summary")
@@ -98,6 +102,15 @@ def main() -> int:
 
     sys.path.insert(0, str(Path(__file__).parent))
     import synthesizer
+
+    backend = synthesizer.resolve_backend(args.backend)
+    if args.voice:
+        voice = args.voice
+    else:
+        voice = (synthesizer.LOCAL_DEFAULT_VOICE if backend == "local"
+                 else "en-US-BrianNeural")
+    base_url = synthesizer.resolve_base_url(args.base_url)
+    print(f"backend: {backend} | base: {base_url} | voice: {voice}")
 
     # Instrument stable entry points so phase times survive refactors.
     phase_times: dict[str, float] = {}
@@ -150,8 +163,9 @@ def main() -> int:
 
         t0 = time.perf_counter()
         out_path = synthesizer.synthesize(
-            text, voice=args.voice, rate=args.rate,
+            text, voice=voice, rate=args.rate,
             title=f"{args.title}_{run}", progress_callback=progress,
+            backend=backend, base_url=base_url,
         )
         wall = time.perf_counter() - t0
         outputs.append(out_path)

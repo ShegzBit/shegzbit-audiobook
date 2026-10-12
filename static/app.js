@@ -172,6 +172,117 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     return v >= 0 ? `+${v}%` : `${v}%`;
   }
 
+  // -----------------------------------------------------------------------
+  // TTS backend toggle + base URL + dynamic local voices
+  // -----------------------------------------------------------------------
+  const backendToggle = document.getElementById('backend-toggle');
+  const ttsUrlInput   = document.getElementById('tts-url-input');
+  const ttsStatus     = document.getElementById('tts-status');
+  const BACKEND_KEY   = 'tts-backend';
+  const BASEURL_KEY   = 'tts-base-url';
+  const DEFAULT_BASE  = (ttsUrlInput && ttsUrlInput.value.trim()) || 'http://127.0.0.1:5001';
+
+  let edgeVoiceOptions = null; // snapshot of server-rendered edge <options>
+  function snapshotEdgeVoices() {
+    if (!edgeVoiceOptions) {
+      edgeVoiceOptions = Array.from(voiceSelect.options).map(o => ({
+        value: o.value, label: o.textContent,
+      }));
+    }
+  }
+  snapshotEdgeVoices();
+
+  function getBackend() {
+    return localStorage.getItem(BACKEND_KEY) || 'local';
+  }
+  function getBaseUrl() {
+    const v = (ttsUrlInput && ttsUrlInput.value.trim()) || localStorage.getItem(BASEURL_KEY) || DEFAULT_BASE;
+    return v.replace(/\/+$/, '');
+  }
+  function ttsFields() {
+    return { backend: getBackend(), tts_url: getBaseUrl() };
+  }
+
+  function paintBackendToggle() {
+    if (!backendToggle) return;
+    const cur = getBackend();
+    backendToggle.querySelectorAll('.seg-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.backend === cur);
+    });
+  }
+
+  function setVoiceOptions(list) {
+    const prev = voiceSelect.value;
+    voiceSelect.innerHTML = '';
+    for (const v of list) {
+      const opt = document.createElement('option');
+      opt.value = v.value;
+      opt.textContent = v.label;
+      voiceSelect.appendChild(opt);
+    }
+    if (list.some(v => v.value === prev)) voiceSelect.value = prev;
+  }
+
+  async function refreshLocalVoices() {
+    if (getBackend() !== 'local') {
+      setVoiceOptions(edgeVoiceOptions);
+      return;
+    }
+    const base = getBaseUrl();
+    try {
+      if (ttsStatus) ttsStatus.textContent = 'Checking local TTS…';
+      const resp = await fetch(`/api/tts-voices?base_url=${encodeURIComponent(base)}`);
+      const data = await resp.json();
+      const voices = (data.voices || []).map(v => ({ value: v.id, label: v.label || v.id }));
+      if (voices.length) {
+        setVoiceOptions(voices);
+        if (ttsStatus) ttsStatus.textContent = `Local TTS OK — ${voices.length} voice(s)`;
+      } else {
+        setVoiceOptions([{ value: 'Bella', label: 'Bella' }]);
+        if (ttsStatus) ttsStatus.textContent = 'Local TTS unreachable — using Bella fallback';
+      }
+    } catch (_) {
+      setVoiceOptions([{ value: 'Bella', label: 'Bella' }]);
+      if (ttsStatus) ttsStatus.textContent = 'Local TTS unreachable — using Bella fallback';
+    }
+    try {
+      const h = await fetch(`/api/tts-health?base_url=${encodeURIComponent(base)}`);
+      const hj = await h.json();
+      if (ttsStatus && hj && hj.ok === false && hj.error) {
+        ttsStatus.textContent = 'Local TTS unreachable — using Bella fallback';
+      }
+    } catch (_) {}
+  }
+
+  if (backendToggle) {
+    if (!localStorage.getItem(BACKEND_KEY)) localStorage.setItem(BACKEND_KEY, 'local');
+    if (ttsUrlInput && !ttsUrlInput.value.trim()) ttsUrlInput.value = localStorage.getItem(BASEURL_KEY) || DEFAULT_BASE;
+    if (ttsUrlInput && localStorage.getItem(BASEURL_KEY)) ttsUrlInput.value = localStorage.getItem(BASEURL_KEY);
+    paintBackendToggle();
+    backendToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      localStorage.setItem(BACKEND_KEY, btn.dataset.backend);
+      paintBackendToggle();
+      refreshLocalVoices();
+    });
+  }
+  if (ttsUrlInput) {
+    let urlTimer = null;
+    ttsUrlInput.addEventListener('change', () => {
+      localStorage.setItem(BASEURL_KEY, ttsUrlInput.value.trim());
+      refreshLocalVoices();
+    });
+    ttsUrlInput.addEventListener('input', () => {
+      clearTimeout(urlTimer);
+      urlTimer = setTimeout(() => {
+        localStorage.setItem(BASEURL_KEY, ttsUrlInput.value.trim());
+        if (getBackend() === 'local') refreshLocalVoices();
+      }, 800);
+    });
+  }
+  refreshLocalVoices();
+
   function estDuration(words) {
     const mins = Math.round(words / 150);
     return mins < 1 ? '< 1 min' : `~${mins} min`;
@@ -343,7 +454,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     const resp = await fetch('/api/chapters', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, voice: voiceSelect.value, rate: rateValue() }),
+      body: JSON.stringify({ url, voice: voiceSelect.value, rate: rateValue(), ...ttsFields() }),
     });
 
     if (!resp.ok) {
@@ -466,7 +577,8 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
         url: currentJobData.url, 
         html, 
         voice: voiceSelect.value, 
-        rate: rateValue() 
+        rate: rateValue(),
+        ...ttsFields()
       }),
     });
 
@@ -742,7 +854,7 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
       const resp = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: result.url, html: result.html, title: result.title }),
+        body: JSON.stringify({ url: result.url, html: result.html, title: result.title, ...ttsFields() }),
       });
       if (!resp.ok) {
         const err = await resp.json();

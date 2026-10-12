@@ -29,6 +29,15 @@ from database import SessionLocal, get_db, init_db
 from errors import ScrapingError
 from extractor import extract_chapter
 from models import Chapter, Episode, Job, Novel
+from synthesizer import (
+    DEFAULT_TTS_BASE_URL,
+    LOCAL_DEFAULT_VOICE,
+    fetch_local_voices,
+    check_local_health,
+    normalize_base_url,
+    resolve_backend,
+    resolve_base_url,
+)
 from worker import (
     enqueue_job,
     enqueue_job_with_html,
@@ -87,8 +96,26 @@ VOICES = {
     "en-AU-NatashaNeural": "Natasha — AU Female",
 }
 
+EDGE_VOICES = VOICES
+LOCAL_FALLBACK_VOICES = [LOCAL_DEFAULT_VOICE]
+
 DEFAULT_VOICE = "en-US-BrianNeural"
 DEFAULT_RATE = "+0%"
+DEFAULT_BACKEND = "local"
+DEFAULT_TTS_URL = DEFAULT_TTS_BASE_URL
+
+
+def _resolve_submit_tts(backend: str | None, tts_url: str | None) -> tuple[str, str]:
+    b = resolve_backend(backend)
+    base = normalize_base_url(tts_url) if tts_url else resolve_base_url(None)
+    return b, base
+
+
+def _validate_submit_voice(backend: str, voice: str):
+    if backend == "edge" and voice not in EDGE_VOICES:
+        raise HTTPException(status_code=400, detail="Invalid voice for edge backend.")
+    if backend == "local" and not (voice or "").strip():
+        raise HTTPException(status_code=400, detail="Voice is required.")
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +173,9 @@ async def index(request: Request):
         "voices": VOICES,
         "default_voice": DEFAULT_VOICE,
         "default_rate": DEFAULT_RATE,
+        "default_backend": DEFAULT_BACKEND,
+        "default_tts_url": resolve_base_url(None),
+        "local_fallback_voices": LOCAL_FALLBACK_VOICES,
         "auth_enabled": bool(SHARED_PASSWORD),
     })
 
@@ -215,6 +245,8 @@ class SubmitRequest(BaseModel):
     url: str
     voice: str = DEFAULT_VOICE
     rate: str = DEFAULT_RATE
+    backend: str | None = None
+    tts_url: str | None = None
 
 
 class SubmitManualRequest(BaseModel):
@@ -222,6 +254,8 @@ class SubmitManualRequest(BaseModel):
     html: str
     voice: str = DEFAULT_VOICE
     rate: str = DEFAULT_RATE
+    backend: str | None = None
+    tts_url: str | None = None
 
 
 @app.post("/api/chapters")
@@ -230,9 +264,10 @@ async def submit_chapter(req: SubmitRequest, request: Request):
     url = req.url.strip()
     if not url:
         raise HTTPException(status_code=400, detail="URL is required.")
-    if req.voice not in VOICES:
-        raise HTTPException(status_code=400, detail="Invalid voice.")
-    job_id = enqueue_job(url, req.voice, req.rate)
+    backend, base = _resolve_submit_tts(req.backend, req.tts_url)
+    voice = req.voice.strip() or (LOCAL_DEFAULT_VOICE if backend == "local" else DEFAULT_VOICE)
+    _validate_submit_voice(backend, voice)
+    job_id = enqueue_job(url, voice, req.rate, backend=backend, base_url=base)
     return {"job_id": job_id}
 
 
@@ -245,9 +280,11 @@ async def submit_chapter_manual(req: SubmitManualRequest, request: Request):
         raise HTTPException(status_code=400, detail="URL is required.")
     if not html:
         raise HTTPException(status_code=400, detail="HTML content is required.")
-    if req.voice not in VOICES:
-        raise HTTPException(status_code=400, detail="Invalid voice.")
-    job_id = enqueue_job_with_html(url, html, req.voice, req.rate)
+    backend, base = _resolve_submit_tts(req.backend, req.tts_url)
+    voice = req.voice.strip() or (LOCAL_DEFAULT_VOICE if backend == "local" else DEFAULT_VOICE)
+    _validate_submit_voice(backend, voice)
+    job_id = enqueue_job_with_html(url, html, voice, req.rate,
+                                   backend=backend, base_url=base)
     return {"job_id": job_id}
 
 
@@ -255,6 +292,8 @@ class CreateJobRequest(BaseModel):
     url: str
     html: str
     title: str | None = None
+    backend: str | None = None
+    tts_url: str | None = None
 
 
 @app.post("/api/jobs")
@@ -280,9 +319,12 @@ async def create_job(req: CreateJobRequest, request: Request):
         raise HTTPException(status_code=400, detail=f"Failed to extract chapter: {e}")
 
     job_id = str(uuid.uuid4())
+    backend, base = _resolve_submit_tts(req.backend, req.tts_url)
+    voice = LOCAL_DEFAULT_VOICE if backend == "local" else DEFAULT_VOICE
     job = Job(
         id=job_id, url=url,
-        voice=DEFAULT_VOICE, rate=DEFAULT_RATE,
+        voice=voice, rate=DEFAULT_RATE,
+        tts_backend=backend, tts_base_url=base,
         status="queued",
     )
     db = SessionLocal()
@@ -344,8 +386,35 @@ async def retry_job(job_id: str, request: Request, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="Job not found.")
     if job.status not in ("captcha_blocked", "error"):
         raise HTTPException(status_code=400, detail="Job is not in a retryable state.")
-    new_job_id = enqueue_job(job.url, job.voice, job.rate)
+    new_job_id = enqueue_job(
+        job.url, job.voice, job.rate,
+        backend=getattr(job, "tts_backend", None) or DEFAULT_BACKEND,
+        base_url=getattr(job, "tts_base_url", None),
+    )
     return {"job_id": new_job_id}
+
+
+# ---------------------------------------------------------------------------
+# API — Local TTS passthrough (voices + health, avoids browser CORS)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/tts-voices")
+async def tts_voices(request: Request, base_url: str | None = None):
+    _api_auth(request)
+    base = normalize_base_url(base_url) if base_url else resolve_base_url(None)
+    import asyncio
+    voices = await asyncio.to_thread(fetch_local_voices, base)
+    if not voices:
+        voices = [{"id": v, "label": v} for v in LOCAL_FALLBACK_VOICES]
+    return {"base_url": base, "voices": voices}
+
+
+@app.get("/api/tts-health")
+async def tts_health(request: Request, base_url: str | None = None):
+    _api_auth(request)
+    base = normalize_base_url(base_url) if base_url else resolve_base_url(None)
+    import asyncio
+    return await asyncio.to_thread(check_local_health, base)
 
 
 # ---------------------------------------------------------------------------
@@ -434,7 +503,11 @@ async def queue_next(
     next_url = ep.chapter.next_chapter_url
     if not next_url:
         return {"message": "No next chapter URL detected.", "job_id": None}
-    job_id = enqueue_job(next_url, ep.chapter.voice, ep.chapter.rate)
+    job_id = enqueue_job(
+        next_url, ep.chapter.voice, ep.chapter.rate,
+        backend=getattr(ep.chapter, "tts_backend", None) or DEFAULT_BACKEND,
+        base_url=getattr(ep.chapter, "tts_base_url", None),
+    )
     return {"job_id": job_id, "next_url": next_url}
 
 

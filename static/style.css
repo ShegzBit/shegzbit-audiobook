@@ -193,6 +193,19 @@ label {
 .btn-sm { padding: .4rem .85rem; font-size: .82rem; }
 .btn-full { width: 100%; }
 
+/* ---- TTS backend segmented toggle ---- */
+.segmented { display: inline-flex; gap: .4rem; }
+.seg-btn {
+  padding: .5rem 1.1rem; border-radius: var(--radius-sm);
+  background: var(--glass); border: 1px solid var(--glass-border);
+  color: var(--muted); font-size: .85rem; font-weight: 600; cursor: pointer;
+}
+.seg-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; border-color: transparent;
+}
+.field-hint { font-size: .78rem; color: var(--muted); }
+
 /* ---- Alerts ---- */
 .alert {
   padding: .7rem 1rem; border-radius: var(--radius-sm); font-size: .88rem; margin-bottom: 1rem;

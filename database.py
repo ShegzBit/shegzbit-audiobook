@@ -33,6 +33,24 @@ def init_db():
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE chapters ADD COLUMN chapter_number INTEGER"))
 
+    if "tts_backend" not in jobs_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN tts_backend VARCHAR(20)"))
+    # re-inspect: tts_base_url may be missing even if backend exists
+    jobs_columns = [c["name"] for c in inspect(engine).get_columns("jobs")]
+    if "tts_base_url" not in jobs_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN tts_base_url VARCHAR(500)"))
+
+    chapters_columns = [c["name"] for c in inspect(engine).get_columns("chapters")]
+    if "tts_backend" not in chapters_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE chapters ADD COLUMN tts_backend VARCHAR(20)"))
+    chapters_columns = [c["name"] for c in inspect(engine).get_columns("chapters")]
+    if "tts_base_url" not in chapters_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE chapters ADD COLUMN tts_base_url VARCHAR(500)"))
+
 
 def get_db():
     db = SessionLocal()
