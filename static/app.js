@@ -178,8 +178,10 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
   const backendToggle = document.getElementById('backend-toggle');
   const ttsUrlInput   = document.getElementById('tts-url-input');
   const ttsStatus     = document.getElementById('tts-status');
+  const concInput     = document.getElementById('concurrency-input');
   const BACKEND_KEY   = 'tts-backend';
   const BASEURL_KEY   = 'tts-base-url';
+  const CONC_KEY      = 'tts-concurrency';
   const DEFAULT_BASE  = (ttsUrlInput && ttsUrlInput.value.trim()) || 'http://127.0.0.1:5001';
 
   let edgeVoiceOptions = null; // snapshot of server-rendered edge <options>
@@ -199,8 +201,47 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     const v = (ttsUrlInput && ttsUrlInput.value.trim()) || localStorage.getItem(BASEURL_KEY) || DEFAULT_BASE;
     return v.replace(/\/+$/, '');
   }
+  function defaultConcFor(backend) {
+    if (!concInput) return backend === 'local' ? 4 : 8;
+    const d = parseInt(backend === 'local' ? concInput.dataset.defaultLocal : concInput.dataset.defaultEdge, 10);
+    if (Number.isFinite(d) && d >= 1) return d;
+    return backend === 'local' ? 4 : 8;
+  }
+  function getConcurrency() {
+    const backend = getBackend();
+    const maxLocal = parseInt((concInput && concInput.dataset.defaultLocal) || '4', 10) || 4;
+    const maxEdge = parseInt((concInput && concInput.max) || '64', 10) || 64;
+    let raw = concInput ? parseInt(concInput.value, 10) : NaN;
+    if (!Number.isFinite(raw)) {
+      const stored = parseInt(localStorage.getItem(CONC_KEY) || '', 10);
+      raw = Number.isFinite(stored) ? stored : defaultConcFor(backend);
+    }
+    const cap = backend === 'local' ? maxLocal : maxEdge;
+    const v = Math.max(1, Math.min(raw, cap));
+    return v;
+  }
+  function syncConcurrencyForBackend() {
+    if (!concInput) return;
+    const backend = getBackend();
+    // If empty, fill with backend default; if over local cap, clamp.
+    let raw = parseInt(concInput.value, 10);
+    if (!Number.isFinite(raw)) {
+      const stored = parseInt(localStorage.getItem(CONC_KEY) || '', 10);
+      concInput.value = Number.isFinite(stored) ? stored : defaultConcFor(backend);
+      return;
+    }
+    if (backend === 'local') {
+      const maxLocal = parseInt(concInput.dataset.defaultLocal || '4', 10) || 4;
+      if (raw > maxLocal) concInput.value = maxLocal;
+      if (raw < 1) concInput.value = 1;
+    } else {
+      const maxEdge = parseInt(concInput.max || '64', 10) || 64;
+      if (raw > maxEdge) concInput.value = maxEdge;
+      if (raw < 1) concInput.value = 1;
+    }
+  }
   function ttsFields() {
-    return { backend: getBackend(), tts_url: getBaseUrl() };
+    return { backend: getBackend(), tts_url: getBaseUrl(), concurrency: getConcurrency() };
   }
 
   function paintBackendToggle() {
@@ -258,13 +299,22 @@ if (typeof PAGE !== 'undefined' && PAGE === 'reader') {
     if (!localStorage.getItem(BACKEND_KEY)) localStorage.setItem(BACKEND_KEY, 'local');
     if (ttsUrlInput && !ttsUrlInput.value.trim()) ttsUrlInput.value = localStorage.getItem(BASEURL_KEY) || DEFAULT_BASE;
     if (ttsUrlInput && localStorage.getItem(BASEURL_KEY)) ttsUrlInput.value = localStorage.getItem(BASEURL_KEY);
+    if (concInput && localStorage.getItem(CONC_KEY)) concInput.value = localStorage.getItem(CONC_KEY);
+    syncConcurrencyForBackend();
     paintBackendToggle();
     backendToggle.addEventListener('click', (e) => {
       const btn = e.target.closest('.seg-btn');
       if (!btn) return;
       localStorage.setItem(BACKEND_KEY, btn.dataset.backend);
       paintBackendToggle();
+      syncConcurrencyForBackend();
       refreshLocalVoices();
+    });
+  }
+  if (concInput) {
+    concInput.addEventListener('change', () => {
+      syncConcurrencyForBackend();
+      localStorage.setItem(CONC_KEY, String(getConcurrency()));
     });
   }
   if (ttsUrlInput) {

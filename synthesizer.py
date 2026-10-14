@@ -6,8 +6,8 @@ synthesize(text, voice, rate, title, backend=None, base_url=None) -> Path to MP3
 Backends:
 - "local" (default): POST {base_url}/api/tts {"text","voice","speed"} -> audio/wav.
   Base URL default http://127.0.0.1:5001; other endpoints are appended
-  ({base}/api/voices, {base}/health). Concurrency defaults to 2 (server
-  allows max 2 concurrent syntheses, 503 on overload) with 503-aware retry.
+  ({base}/api/voices, {base}/health). Concurrency defaults to 4 (server
+  allows max 4 concurrent syntheses, 503 on overload) with 503-aware retry.
 - "edge": edge-tts Communicate(text, voice, rate).save() -> mp3.
   Concurrency default 8. Kept as fallback via UI toggle.
 
@@ -62,7 +62,7 @@ MIN_ADAPTIVE_CHUNK_CHARS = 400
 MAX_CHUNK_CHARS = 4500  # hard ceiling, safely under the local server's 5000-char limit
 DEFAULT_PAUSE_MS = 180             # inter-chunk silence (override with TTS_PAUSE_MS)
 DEFAULT_CONCURRENCY = 8          # edge default
-LOCAL_DEFAULT_CONCURRENCY = 2    # server allows max 2 concurrent
+LOCAL_DEFAULT_CONCURRENCY = 4    # server allows max 4 concurrent
 MAX_CONCURRENCY = 64
 RETRY_ATTEMPTS = 3
 LOCAL_RETRY_ATTEMPTS = 4
@@ -439,7 +439,7 @@ async def _synthesize_all(
     base = resolve_base_url(base_url) if backend == "local" else ""
     if concurrency is None:
         if backend == "local":
-            # Server caps at 2 concurrent syntheses — clamp to avoid
+            # Server caps at 4 concurrent syntheses — clamp to avoid
             # guaranteed 503s even if TTS_CONCURRENCY is set high for edge.
             concurrency = _env_int("TTS_CONCURRENCY", LOCAL_DEFAULT_CONCURRENCY,
                                    hi=LOCAL_DEFAULT_CONCURRENCY)
@@ -449,6 +449,8 @@ async def _synthesize_all(
     else:
         if backend == "local":
             concurrency = max(1, min(int(concurrency), LOCAL_DEFAULT_CONCURRENCY))
+        else:
+            concurrency = max(1, min(int(concurrency), MAX_CONCURRENCY))
 
     sem = asyncio.Semaphore(concurrency)
     total = len(chunks)
@@ -732,6 +734,7 @@ def synthesize(
     chapter_number: int | None = None,
     backend: str | None = None,
     base_url: str | None = None,
+    concurrency: int | None = None,
 ) -> Path:
     _require_ffmpeg()
     backend = resolve_backend(backend)
@@ -751,11 +754,22 @@ def synthesize(
             slug = new
     out_path = OUTPUT_DIR / f"chapter_{ch_no}_{slug}.mp3"
 
-    if backend == "local":
-        concurrency = _env_int("TTS_CONCURRENCY", LOCAL_DEFAULT_CONCURRENCY,
-                               hi=LOCAL_DEFAULT_CONCURRENCY)
+    if concurrency is None:
+        if backend == "local":
+            concurrency = _env_int("TTS_CONCURRENCY", LOCAL_DEFAULT_CONCURRENCY,
+                                   hi=LOCAL_DEFAULT_CONCURRENCY)
+        else:
+            concurrency = _env_int("TTS_CONCURRENCY", DEFAULT_CONCURRENCY, hi=MAX_CONCURRENCY)
     else:
-        concurrency = _env_int("TTS_CONCURRENCY", DEFAULT_CONCURRENCY, hi=MAX_CONCURRENCY)
+        try:
+            concurrency = int(concurrency)
+        except (TypeError, ValueError):
+            concurrency = (LOCAL_DEFAULT_CONCURRENCY if backend == "local"
+                           else DEFAULT_CONCURRENCY)
+        if backend == "local":
+            concurrency = max(1, min(concurrency, LOCAL_DEFAULT_CONCURRENCY))
+        else:
+            concurrency = max(1, min(concurrency, MAX_CONCURRENCY))
     if "TTS_CHUNK_CHARS" in os.environ:
         chunks = chunk_text(text)
     else:

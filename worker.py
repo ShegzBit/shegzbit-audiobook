@@ -125,6 +125,24 @@ def _job_tts(job) -> tuple[str, str]:
     return backend, base
 
 
+def _job_concurrency(job) -> int | None:
+    """Return per-job chunk concurrency, or None to use env/backend defaults."""
+    try:
+        val = getattr(job, "tts_concurrency", None)
+    except Exception:
+        return None
+    return _normalize_concurrency(val)
+
+
+def _normalize_concurrency(val) -> int | None:
+    if val is None:
+        return None
+    try:
+        return max(1, min(int(val), 64))
+    except (TypeError, ValueError):
+        return None
+
+
 def _find_or_create_novel(db, novel_title: Optional[str], novel_index_url: Optional[str]) -> Optional[Novel]:
     if not novel_title:
         return None
@@ -279,7 +297,8 @@ def process_job(job_id: str):
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
                                 chapter_number=chapter.chapter_number,
-                                backend=backend, base_url=base)
+                                backend=backend, base_url=base,
+                                concurrency=_job_concurrency(job))
 
         # Save
         db2 = SessionLocal()
@@ -364,7 +383,8 @@ def process_job_from_html(job_id: str, html: str):
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
                                 chapter_number=chapter.chapter_number,
-                                backend=backend, base_url=base)
+                                backend=backend, base_url=base,
+                                concurrency=_job_concurrency(job))
 
         db2 = SessionLocal()
         try:
@@ -439,7 +459,8 @@ def process_pre_extracted_job(job_id: str, chapter):
         audio_path = synthesize(chapter.text, job.voice, job.rate, chapter.title,
                                 progress_callback=_on_synthesis_progress,
                                 chapter_number=chapter.chapter_number,
-                                backend=backend, base_url=base)
+                                backend=backend, base_url=base,
+                                concurrency=_job_concurrency(job))
 
         db2 = SessionLocal()
         try:
@@ -494,14 +515,17 @@ def process_pre_extracted_job(job_id: str, chapter):
 
 
 def enqueue_job(url: str, voice: str, rate: str,
-                backend: str | None = None, base_url: str | None = None) -> str:
+                backend: str | None = None, base_url: str | None = None,
+                concurrency: int | None = None) -> str:
     backend = resolve_backend(backend)
     base = resolve_base_url(base_url)
+    conc = _normalize_concurrency(concurrency)
     db = SessionLocal()
     try:
         job_id = str(uuid.uuid4())
         job = Job(id=job_id, url=url, voice=voice, rate=rate,
-                  tts_backend=backend, tts_base_url=base, status="queued")
+                  tts_backend=backend, tts_base_url=base,
+                  tts_concurrency=conc, status="queued")
         db.add(job)
         db.commit()
     finally:
@@ -513,14 +537,17 @@ def enqueue_job(url: str, voice: str, rate: str,
 
 def enqueue_job_with_html(url: str, html: str, voice: str, rate: str,
                           backend: str | None = None,
-                          base_url: str | None = None) -> str:
+                          base_url: str | None = None,
+                          concurrency: int | None = None) -> str:
     backend = resolve_backend(backend)
     base = resolve_base_url(base_url)
+    conc = _normalize_concurrency(concurrency)
     db = SessionLocal()
     try:
         job_id = str(uuid.uuid4())
         job = Job(id=job_id, url=url, voice=voice, rate=rate,
-                  tts_backend=backend, tts_base_url=base, status="queued")
+                  tts_backend=backend, tts_base_url=base,
+                  tts_concurrency=conc, status="queued")
         db.add(job)
         db.commit()
     finally:

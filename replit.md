@@ -29,7 +29,7 @@ A family-use web app that converts web novel chapters to natural-sounding audiob
 | `SECRET_KEY` | Cookie signing key (auto-generated if unset) | No |
 | `TTS_BACKEND` | Default TTS engine: `local` or `edge` (per-job toggle in UI overrides) | No (default `local`) |
 | `TTS_BASE_URL` | Local TTS base URL; `/api/tts`, `/api/voices`, `/health` are appended (default `http://127.0.0.1:5001`) | No |
-| `TTS_CONCURRENCY` | Parallel chunk syntheses (local is capped at 2 — the server 503s above that; edge default 8) | No |
+| `TTS_CONCURRENCY` | Parallel chunk syntheses (local is capped at 4 — the server 503s above that, retried with backoff; edge default 8; per-job override via page field) | No |
 | `TTS_CHUNK_CHARS` | Max chars per TTS call, overriding the per-backend default (local 900, edge 3500; hard ceiling 4500) | No |
 | `TTS_PAUSE_MS` | Silence stitched between chunks in ms (default 180) | No |
 

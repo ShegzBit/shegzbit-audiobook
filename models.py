@@ -15,6 +15,7 @@ class Job(Base):
     rate = Column(String(20), nullable=False)
     tts_backend = Column(String(20), nullable=True)
     tts_base_url = Column(String(500), nullable=True)
+    tts_concurrency = Column(Integer, nullable=True)
     status = Column(String(30), nullable=False, default="queued")
     error_msg = Column(Text, nullable=True)
     progress_pct = Column(Integer, nullable=True)

@@ -30,8 +30,11 @@ from errors import ScrapingError
 from extractor import extract_chapter
 from models import Chapter, Episode, Job, Novel
 from synthesizer import (
+    DEFAULT_CONCURRENCY,
     DEFAULT_TTS_BASE_URL,
+    LOCAL_DEFAULT_CONCURRENCY,
     LOCAL_DEFAULT_VOICE,
+    MAX_CONCURRENCY,
     fetch_local_voices,
     check_local_health,
     normalize_base_url,
@@ -111,6 +114,19 @@ def _resolve_submit_tts(backend: str | None, tts_url: str | None) -> tuple[str, 
     return b, base
 
 
+def _normalize_submit_concurrency(backend: str, value) -> int | None:
+    """Clamp page-supplied concurrency: Local 1-4, Edge 1-64. None = default."""
+    if value is None:
+        return None
+    try:
+        v = int(value)
+    except (TypeError, ValueError):
+        return None
+    if backend == "local":
+        return max(1, min(v, LOCAL_DEFAULT_CONCURRENCY))
+    return max(1, min(v, MAX_CONCURRENCY))
+
+
 def _validate_submit_voice(backend: str, voice: str):
     if backend == "edge" and voice not in EDGE_VOICES:
         raise HTTPException(status_code=400, detail="Invalid voice for edge backend.")
@@ -175,6 +191,9 @@ async def index(request: Request):
         "default_rate": DEFAULT_RATE,
         "default_backend": DEFAULT_BACKEND,
         "default_tts_url": resolve_base_url(None),
+        "default_concurrency_edge": DEFAULT_CONCURRENCY,
+        "default_concurrency_local": LOCAL_DEFAULT_CONCURRENCY,
+        "max_concurrency": MAX_CONCURRENCY,
         "local_fallback_voices": LOCAL_FALLBACK_VOICES,
         "auth_enabled": bool(SHARED_PASSWORD),
     })
@@ -247,6 +266,7 @@ class SubmitRequest(BaseModel):
     rate: str = DEFAULT_RATE
     backend: str | None = None
     tts_url: str | None = None
+    concurrency: int | None = None
 
 
 class SubmitManualRequest(BaseModel):
@@ -256,6 +276,7 @@ class SubmitManualRequest(BaseModel):
     rate: str = DEFAULT_RATE
     backend: str | None = None
     tts_url: str | None = None
+    concurrency: int | None = None
 
 
 @app.post("/api/chapters")
@@ -267,7 +288,9 @@ async def submit_chapter(req: SubmitRequest, request: Request):
     backend, base = _resolve_submit_tts(req.backend, req.tts_url)
     voice = req.voice.strip() or (LOCAL_DEFAULT_VOICE if backend == "local" else DEFAULT_VOICE)
     _validate_submit_voice(backend, voice)
-    job_id = enqueue_job(url, voice, req.rate, backend=backend, base_url=base)
+    conc = _normalize_submit_concurrency(backend, req.concurrency)
+    job_id = enqueue_job(url, voice, req.rate, backend=backend, base_url=base,
+                         concurrency=conc)
     return {"job_id": job_id}
 
 
@@ -283,8 +306,10 @@ async def submit_chapter_manual(req: SubmitManualRequest, request: Request):
     backend, base = _resolve_submit_tts(req.backend, req.tts_url)
     voice = req.voice.strip() or (LOCAL_DEFAULT_VOICE if backend == "local" else DEFAULT_VOICE)
     _validate_submit_voice(backend, voice)
+    conc = _normalize_submit_concurrency(backend, req.concurrency)
     job_id = enqueue_job_with_html(url, html, voice, req.rate,
-                                   backend=backend, base_url=base)
+                                   backend=backend, base_url=base,
+                                   concurrency=conc)
     return {"job_id": job_id}
 
 
@@ -294,6 +319,7 @@ class CreateJobRequest(BaseModel):
     title: str | None = None
     backend: str | None = None
     tts_url: str | None = None
+    concurrency: int | None = None
 
 
 @app.post("/api/jobs")
@@ -321,10 +347,12 @@ async def create_job(req: CreateJobRequest, request: Request):
     job_id = str(uuid.uuid4())
     backend, base = _resolve_submit_tts(req.backend, req.tts_url)
     voice = LOCAL_DEFAULT_VOICE if backend == "local" else DEFAULT_VOICE
+    conc = _normalize_submit_concurrency(backend, req.concurrency)
     job = Job(
         id=job_id, url=url,
         voice=voice, rate=DEFAULT_RATE,
         tts_backend=backend, tts_base_url=base,
+        tts_concurrency=conc,
         status="queued",
     )
     db = SessionLocal()
@@ -390,6 +418,7 @@ async def retry_job(job_id: str, request: Request, db: Session = Depends(get_db)
         job.url, job.voice, job.rate,
         backend=getattr(job, "tts_backend", None) or DEFAULT_BACKEND,
         base_url=getattr(job, "tts_base_url", None),
+        concurrency=getattr(job, "tts_concurrency", None),
     )
     return {"job_id": new_job_id}
 
@@ -503,10 +532,18 @@ async def queue_next(
     next_url = ep.chapter.next_chapter_url
     if not next_url:
         return {"message": "No next chapter URL detected.", "job_id": None}
+    # Inherit concurrency from the most recent job for this chapter URL, if any.
+    prev_job = (
+        db.query(Job)
+        .filter(Job.url == ep.chapter.url)
+        .order_by(Job.created_at.desc())
+        .first()
+    )
     job_id = enqueue_job(
         next_url, ep.chapter.voice, ep.chapter.rate,
         backend=getattr(ep.chapter, "tts_backend", None) or DEFAULT_BACKEND,
         base_url=getattr(ep.chapter, "tts_base_url", None),
+        concurrency=getattr(prev_job, "tts_concurrency", None) if prev_job else None,
     )
     return {"job_id": job_id, "next_url": next_url}
 

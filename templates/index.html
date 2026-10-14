@@ -50,6 +50,19 @@
     </div>
   </div>
 
+  <div class="row-2">
+    <div class="field" style="max-width:12rem">
+      <label for="concurrency-input">Concurrent chunks</label>
+      <input type="number" id="concurrency-input" class="input"
+             min="1" max="{{ max_concurrency }}" step="1"
+             value="{{ default_concurrency_local }}"
+             data-default-edge="{{ default_concurrency_edge }}"
+             data-default-local="{{ default_concurrency_local }}"
+             title="How many text chunks synthesize in parallel" />
+      <div class="field-hint">Edge 1–{{ max_concurrency }}, Local max {{ default_concurrency_local }} (clamped)</div>
+    </div>
+  </div>
+
   <div class="toggles-row">
     <div class="field toggle-field">
       <label class="toggle-label">
